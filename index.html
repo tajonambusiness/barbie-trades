@@ -207,6 +207,31 @@ select { font-family: 'Nunito',sans-serif; font-size: 13px; font-weight: 700; ba
 .how-it-works { max-width: 420px; background: white; border-radius: 18px; padding: 18px 24px; border: 2px solid var(--border); box-shadow: 0 4px 20px rgba(233,30,140,.08); text-align: center; font-size: 13px; color: #AD1457; line-height: 1.75; }
 .how-it-works strong { color: var(--hp); }
 @media (max-width: 560px) { .logo { font-size: 36px; } .session-stats { display: none; } .result-card { padding: 20px 16px; } }
+
+/* ── CANDLE TOOLTIP ── */
+#candleTip { position:absolute; background:rgba(30,0,20,.88); color:white; padding:8px 12px; border-radius:10px; font-size:12px; font-weight:700; pointer-events:none; display:none; z-index:30; max-width:220px; line-height:1.5; }
+#candleTip .ct-name { font-size:13px; font-weight:900; margin-bottom:3px; }
+#candleTip .ct-sig { font-size:11px; font-weight:600; opacity:.9; }
+
+/* ── CANDLE GUIDE OVERLAY ── */
+#candleGuide { display:none; position:fixed; inset:0; z-index:400; background:rgba(233,30,140,.12); backdrop-filter:blur(4px); align-items:center; justify-content:center; padding:16px; overflow-y:auto; }
+#candleGuide.show { display:flex; }
+.cg-card { background:white; border-radius:24px; max-width:680px; width:100%; padding:28px; box-shadow:0 24px 80px rgba(233,30,140,.22); max-height:90vh; overflow-y:auto; }
+.cg-title { font-family:'Pacifico',cursive; font-size:22px; color:var(--hp); margin-bottom:6px; }
+.cg-sub { font-size:13px; color:#AD1457; margin-bottom:20px; }
+.cg-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:12px; margin-bottom:20px; }
+.cg-pattern { background:var(--lp); border-radius:14px; padding:12px 14px; border:1.5px solid var(--border); }
+.cg-pattern .cg-pname { font-size:13px; font-weight:900; margin-bottom:4px; }
+.cg-pattern .cg-psig { font-size:11px; color:#AD1457; line-height:1.5; }
+.cg-pattern.bull { border-color:rgba(38,166,154,.4); background:rgba(38,166,154,.07); }
+.cg-pattern.bull .cg-pname { color:#00695C; }
+.cg-pattern.bear { border-color:rgba(239,83,80,.4); background:rgba(239,83,80,.07); }
+.cg-pattern.bear .cg-pname { color:#B71C1C; }
+.cg-pattern.neut { border-color:rgba(156,39,176,.4); background:rgba(156,39,176,.07); }
+.cg-pattern.neut .cg-pname { color:#6A1B9A; }
+.cg-section { font-size:13px; font-weight:900; color:var(--hp); text-transform:uppercase; letter-spacing:1px; margin:16px 0 8px; }
+.cg-rule { background:linear-gradient(135deg,#FFF0F8,#FCE4EC); border-radius:12px; padding:12px 16px; font-size:13px; color:var(--text); line-height:1.65; margin-bottom:8px; border:1.5px solid var(--border); }
+.cg-rule strong { color:var(--hp); }
 </style>
 </head>
 <body>
@@ -255,6 +280,7 @@ select { font-family: 'Nunito',sans-serif; font-size: 13px; font-weight: 700; ba
   <div class="tut-btn-wrap">
     <button class="btn btn-primary" onclick="startTraining()">✨ Start Training Session</button>
     <button class="btn btn-secondary" onclick="openTutorial()">📖 Watch Tutorial First</button>
+    <button class="btn btn-secondary" onclick="openCandleGuide()">🕯️ Candle Patterns Guide</button>
     <button class="btn btn-secondary" onclick="goStats()">📊 My Stats</button>
   </div>
 
@@ -291,7 +317,11 @@ select { font-family: 'Nunito',sans-serif; font-size: 13px; font-weight: 700; ba
       <div class="dt-sep"></div>
       <button class="dt-btn" onclick="undoDrawing()">↩ Undo</button>
       <button class="dt-btn" onclick="clearDrawings()">🗑 Clear</button>
+      <div class="dt-sep"></div>
+      <button class="dt-btn" id="dtStructure" onclick="toggleStructure()">📐 Structure</button>
+      <button class="dt-btn" id="dtZones" onclick="toggleZones()">🔲 Zones</button>
     </div>
+    <div id="candleTip"><div class="ct-name" id="ctName"></div><div class="ct-sig" id="ctSig"></div></div>
   </div>
   <div class="control-panel">
     <div class="control-panel-scroll">
@@ -367,6 +397,7 @@ const app = {
   sWins:0, sLosses:0, sStreak:0,
   drawings:[], drawTool:null, drawColor:'#E91E8C', drawFirstPt:null, drawPreview:null,
   viewShift:0, viewZoom:1,
+  showStructure:false, showZones:false,
 };
 
 // ── ROUNDRECT POLYFILL ───────────────────────
@@ -490,6 +521,9 @@ function drawChart(visCount, canvasId='chartCanvas'){
 
   ctx.fillStyle='#FFFFFF'; ctx.fillRect(0,0,W,H);
 
+  // Supply & Demand zones (draw before candles so they sit behind)
+  if(app.showZones && canvasId==='chartCanvas') drawZonesOverlay(ctx,effStart,clampedCount,minP,maxP,W,H,candleW);
+
   // Grid
   for(let i=0;i<=6;i++){
     const p=minP+(maxP-minP)*(i/6), y=p2y(p,minP,maxP,H);
@@ -549,6 +583,9 @@ function drawChart(visCount, canvasId='chartCanvas'){
     ctx.fillStyle='rgba(239,83,80,.07)'; ctx.fillRect(x0,Math.min(eY,sY),x1-x0,Math.abs(sY-eY));
     ctx.fillStyle='rgba(38,166,154,.07)'; ctx.fillRect(x0,Math.min(eY,tY),x1-x0,Math.abs(tY-eY));
   }
+
+  // Structure labels (HH/HL/LH/LL — draw after candles so labels are on top)
+  if(app.showStructure && canvasId==='chartCanvas') drawStructureOverlay(ctx,effStart,clampedCount,minP,maxP,W,H,candleW);
 
   // User drawings
   renderDrawings(ctx,minP,maxP,W,H,clampedCount);
@@ -650,6 +687,7 @@ document.getElementById('chartCanvas').addEventListener('click',e=>{
 
 document.getElementById('chartCanvas').addEventListener('mousemove',e=>{
   const tt=document.getElementById('priceTooltip');
+  const ct=document.getElementById('candleTip');
   const canvas=document.getElementById('chartCanvas'), rect=canvas.getBoundingClientRect();
   const price=yToPrice(e.clientY);
   if(app.drawTool==='tline'&&app.drawFirstPt){
@@ -657,11 +695,37 @@ document.getElementById('chartCanvas').addEventListener('mousemove',e=>{
     drawChart(HISTORY+1+app.revealIdx);
   }
   const show=app.drawTool||['entry','stop','target'].includes(app.phase);
-  if(!show){tt.style.display='none';return;}
-  tt.style.display='block'; tt.style.left=(e.clientX-rect.left+14)+'px'; tt.style.top=(e.clientY-rect.top-12)+'px'; tt.textContent=price.toFixed(0);
+  if(!show){tt.style.display='none';}else{
+    tt.style.display='block'; tt.style.left=(e.clientX-rect.left+14)+'px'; tt.style.top=(e.clientY-rect.top-12)+'px'; tt.textContent=price.toFixed(0);
+  }
+  // Candle pattern tooltip (pan-aware)
+  if(app.candles.length&&!['welcome','result'].includes(app.phase)){
+    const visCount=HISTORY+1+app.revealIdx;
+    const zoomedCount=Math.round(visCount/(app.viewZoom||1));
+    const clampedCount=Math.max(10,Math.min(zoomedCount,app.candles.length));
+    const rawStart=app.winStart-(app.viewShift||0);
+    const effStart=Math.max(0,Math.min(rawStart,app.candles.length-clampedCount));
+    const candleW=(canvas.width-PAD.left-PAD.right)/clampedCount;
+    const xPx=(e.clientX-rect.left)*(canvas.width/rect.width);
+    const ci=Math.round((xPx-PAD.left)/candleW);
+    if(ci>=0&&ci<clampedCount){
+      const absIdx=effStart+ci;
+      const pat=getCandlePattern(app.candles,absIdx);
+      if(pat){
+        document.getElementById('ctName').textContent=pat.name;
+        document.getElementById('ctSig').textContent=pat.sig;
+        ct.style.color=pat.color;
+        const lx=e.clientX-rect.left, ly=e.clientY-rect.top;
+        ct.style.left=(lx>rect.width*0.6?lx-230:lx+14)+'px';
+        ct.style.top=Math.max(4,ly-40)+'px';
+        ct.style.display='block';
+      } else ct.style.display='none';
+    } else ct.style.display='none';
+  } else ct.style.display='none';
 });
 document.getElementById('chartCanvas').addEventListener('mouseleave',()=>{
   document.getElementById('priceTooltip').style.display='none';
+  document.getElementById('candleTip').style.display='none';
   if(app.drawTool==='tline'&&app.drawFirstPt){app.drawPreview=null;drawChart(HISTORY+1+app.revealIdx);}
 });
 
@@ -743,11 +807,127 @@ function setDrawTool(t){
   app.drawTool=app.drawTool===t?null:t; app.drawFirstPt=null; app.drawPreview=null;
   document.getElementById('dtHLine').classList.toggle('active',app.drawTool==='hline');
   document.getElementById('dtTLine').classList.toggle('active',app.drawTool==='tline');
-  document.getElementById('chartCanvas').style.cursor=app.drawTool?'crosshair':'default';
+  document.getElementById('chartCanvas').style.cursor=app.drawTool?'crosshair':'grab';
 }
 function setDrawColor(c,idx){ app.drawColor=c; document.querySelectorAll('.dt-swatch').forEach((s,i)=>s.classList.toggle('active',i===idx)); }
 function undoDrawing(){ app.drawFirstPt=null; app.drawPreview=null; if(app.drawings.length)app.drawings.pop(); drawChart(HISTORY+1+app.revealIdx); }
 function clearDrawings(){ app.drawings=[]; app.drawFirstPt=null; app.drawPreview=null; drawChart(HISTORY+1+app.revealIdx); }
+function toggleStructure(){ app.showStructure=!app.showStructure; document.getElementById('dtStructure').classList.toggle('active',app.showStructure); drawChart(HISTORY+1+app.revealIdx); }
+function toggleZones(){ app.showZones=!app.showZones; document.getElementById('dtZones').classList.toggle('active',app.showZones); drawChart(HISTORY+1+app.revealIdx); }
+function openCandleGuide(){ document.getElementById('candleGuide').classList.add('show'); }
+function closeCandleGuide(){ document.getElementById('candleGuide').classList.remove('show'); }
+
+// ── CANDLE PATTERN DETECTION ─────────────────
+function getCandlePattern(candles,i){
+  if(i<1||i>=candles.length)return null;
+  const c=candles[i],p=candles[i-1];
+  const range=c.h-c.l; if(range<0.01)return null;
+  const body=Math.abs(c.c-c.o);
+  const upper=c.h-Math.max(c.c,c.o);
+  const lower=Math.min(c.c,c.o)-c.l;
+  const isBull=c.c>=c.o;
+
+  // Doji variants
+  if(body<=range*0.08){
+    if(lower>range*0.38&&upper<range*0.15)return{name:'Dragonfly Doji 🐉',sig:'Strong bullish reversal — buyers took full control from lows.',color:'#00897B'};
+    if(upper>range*0.38&&lower<range*0.15)return{name:'Gravestone Doji ⚰️',sig:'Strong bearish reversal — sellers took full control from highs.',color:'#B71C1C'};
+    return{name:'Doji ⚖️',sig:'Market indecision — neither side won. Watch the next candle.',color:'#6A1B9A'};
+  }
+  // Engulfing (check before single patterns)
+  if(p){
+    const pBull=p.c>=p.o;
+    if(isBull&&!pBull&&c.o<=p.c&&c.c>=p.o)return{name:'Bullish Engulfing 💚',sig:'POWERFUL BUY. Green swallowed the red — buyers took over completely.',color:'#00695C'};
+    if(!isBull&&pBull&&c.o>=p.c&&c.c<=p.o)return{name:'Bearish Engulfing ❤️',sig:'POWERFUL SELL. Red swallowed the green — sellers took over completely.',color:'#B71C1C'};
+    if(c.h<=p.h&&c.l>=p.l)return{name:'Inside Bar 📦',sig:'Price coiling inside previous candle. Breakout coming — watch direction.',color:'#6A1B9A'};
+  }
+  // Hammer / Shooting Star
+  if(lower>=body*2&&upper<=body*0.4)return{name:isBull?'Hammer 🔨':'Hanging Man 🪝',sig:isBull?'Bullish reversal — buyers rejected lower prices. Buy signal at support.':'Caution at top — sellers tried to push lower.',color:isBull?'#00897B':'#C62828'};
+  if(upper>=body*2&&lower<=body*0.4)return{name:isBull?'Inverted Hammer 🔄':'Shooting Star ⭐',sig:isBull?'Potential reversal up. Needs confirmation next candle.':'Bearish reversal — sellers rejected higher prices. Sell at resistance.',color:isBull?'#00897B':'#C62828'};
+  // Pin Bar
+  if(lower>=body*2.5)return{name:'Bullish Pin Bar 📌',sig:'Hard rejection of lows — buyers came in strong. Potential buy signal.',color:'#00897B'};
+  if(upper>=body*2.5)return{name:'Bearish Pin Bar 📌',sig:'Hard rejection of highs — sellers came in strong. Potential sell signal.',color:'#C62828'};
+  // Marubozu
+  if(upper<=range*0.04&&lower<=range*0.04)return{name:isBull?'Bullish Marubozu 🚀':'Bearish Marubozu 💣',sig:isBull?'Pure buyer momentum — no wicks, nobody pushed back.':'Pure seller momentum — no wicks, nobody pushed back.',color:isBull?'#00897B':'#C62828'};
+  // Default
+  return{name:isBull?'Bullish Candle 🟢':'Bearish Candle 🔴',sig:isBull?'Price closed higher than it opened.':'Price closed lower than it opened.',color:isBull?'#26A69A':'#EF5350'};
+}
+
+// ── STRUCTURE (HH/HL/LH/LL) OVERLAY ──────────
+function detectStructurePoints(candles,effStart,count,lb=5){
+  const slice=candles.slice(effStart,effStart+count);
+  const raw=[];
+  for(let i=lb;i<slice.length-lb;i++){
+    const win=slice.slice(i-lb,i+lb+1);
+    if(slice[i].h===Math.max(...win.map(c=>c.h)))raw.push({type:'high',price:slice[i].h,idx:i});
+    if(slice[i].l===Math.min(...win.map(c=>c.l)))raw.push({type:'low',price:slice[i].l,idx:i});
+  }
+  raw.sort((a,b)=>a.idx-b.idx);
+  let lastH=null,lastL=null;
+  for(const pt of raw){
+    if(pt.type==='high'){
+      pt.label=lastH==null?'SH':pt.price>lastH.price?'HH':'LH';
+      lastH=pt;
+    } else {
+      pt.label=lastL==null?'SL':pt.price>lastL.price?'HL':'LL';
+      lastL=pt;
+    }
+  }
+  return raw;
+}
+
+function drawStructureOverlay(ctx,effStart,count,minP,maxP,W,H,candleW){
+  const pts=detectStructurePoints(app.candles,effStart,count);
+  for(const pt of pts){
+    if(!pt.label)continue;
+    const x=PAD.left+pt.idx*candleW+candleW/2;
+    const isHi=pt.type==='high';
+    const py=p2y(pt.price,minP,maxP,H);
+    const bullish=pt.label==='HH'||pt.label==='HL';
+    const col=bullish?'#00897B':pt.label==='SH'||pt.label==='SL'?'#9C27B0':'#C62828';
+    ctx.fillStyle=col;
+    ctx.beginPath(); ctx.arc(x,isHi?py-5:py+5,4,0,Math.PI*2); ctx.fill();
+    ctx.font='bold 9px Nunito,sans-serif'; ctx.textAlign='center';
+    ctx.fillText(pt.label,x,isHi?py-12:py+16);
+  }
+}
+
+// ── SUPPLY & DEMAND ZONE OVERLAY ─────────────
+function detectSDZones(candles,effStart,count){
+  const zones=[];
+  const slice=candles.slice(effStart,effStart+count);
+  for(let i=3;i<slice.length-5;i++){
+    const base=slice.slice(i-2,i+1);
+    const bHi=Math.max(...base.map(c=>c.h)), bLo=Math.min(...base.map(c=>c.l));
+    const bRange=bHi-bLo; if(bRange<0.1)continue;
+    const next=slice.slice(i+1,Math.min(slice.length,i+5));
+    const up=next.some(c=>c.c>bHi+bRange*0.8);
+    const dn=next.some(c=>c.c<bLo-bRange*0.8);
+    if(up&&!zones.some(z=>z.type==='demand'&&Math.abs(z.mid-(bHi+bLo)/2)<bRange*3))
+      zones.push({type:'demand',top:bHi+bRange*0.15,bot:bLo-bRange*0.15,si:Math.max(0,i-2),mid:(bHi+bLo)/2});
+    if(dn&&!zones.some(z=>z.type==='supply'&&Math.abs(z.mid-(bHi+bLo)/2)<bRange*3))
+      zones.push({type:'supply',top:bHi+bRange*0.15,bot:bLo-bRange*0.15,si:Math.max(0,i-2),mid:(bHi+bLo)/2});
+  }
+  return zones;
+}
+
+function drawZonesOverlay(ctx,effStart,count,minP,maxP,W,H,candleW){
+  const zones=detectSDZones(app.candles,effStart,count);
+  for(const z of zones){
+    const y1=p2y(z.top,minP,maxP,H), y2=p2y(z.bot,minP,maxP,H);
+    const x1=PAD.left+z.si*candleW;
+    const isDemand=z.type==='demand';
+    ctx.fillStyle=isDemand?'rgba(38,166,154,.13)':'rgba(239,83,80,.13)';
+    ctx.fillRect(x1,y1,W-PAD.right-x1,y2-y1);
+    ctx.strokeStyle=isDemand?'rgba(0,137,123,.35)':'rgba(183,28,28,.35)';
+    ctx.lineWidth=1; ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(W-PAD.right,y1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x1,y2); ctx.lineTo(W-PAD.right,y2); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle=isDemand?'rgba(0,137,123,.7)':'rgba(183,28,28,.7)';
+    ctx.font='bold 8px Nunito,sans-serif'; ctx.textAlign='left';
+    ctx.fillText(isDemand?'DEMAND':'SUPPLY',x1+3,y1+10);
+  }
+}
 
 // ════════════════════════════════════════════
 //  PHASE CONFIGS
@@ -1326,5 +1506,52 @@ window.addEventListener('resize',()=>{
 // ── INIT ─────────────────────────────────────
 updateWelcomeStats();
 </script>
+
+<!-- ══════════════ CANDLE GUIDE OVERLAY ══════════════ -->
+<div id="candleGuide">
+  <div class="cg-card">
+    <div class="cg-title">🕯️ Candle Patterns Guide</div>
+    <div class="cg-sub">Hover over any candle on the chart to see its name. Study these patterns — they're your entry signals.</div>
+
+    <div class="cg-section">📈 Bullish Patterns — Signal: Price going UP</div>
+    <div class="cg-grid">
+      <div class="cg-pattern bull"><div class="cg-pname">🟢 Hammer</div><div class="cg-psig">Small body at top, long lower wick (≥2× body). At the bottom of a move = buyers rejected lower prices hard. Strong buy signal at support.</div></div>
+      <div class="cg-pattern bull"><div class="cg-pname">🟢 Bullish Engulfing</div><div class="cg-psig">Big green candle completely swallows the previous red candle. Buyers completely took over. One of the most powerful buy signals.</div></div>
+      <div class="cg-pattern bull"><div class="cg-pname">🟢 Bullish Pin Bar</div><div class="cg-psig">Long lower wick (≥2.5× the body) with a small body near the top. Price shot down but buyers slammed it back up. Buy signal.</div></div>
+      <div class="cg-pattern bull"><div class="cg-pname">🟢 Bullish Marubozu</div><div class="cg-psig">Big green candle with almost no wicks. Pure buyer momentum — nobody pushed back. Strong continuation signal upward.</div></div>
+      <div class="cg-pattern bull"><div class="cg-pname">🟢 Dragonfly Doji</div><div class="cg-psig">Opens and closes at the top, long lower wick. Buyers rejected the lows completely. Very bullish, especially at support levels.</div></div>
+    </div>
+
+    <div class="cg-section">📉 Bearish Patterns — Signal: Price going DOWN</div>
+    <div class="cg-grid">
+      <div class="cg-pattern bear"><div class="cg-pname">🔴 Shooting Star</div><div class="cg-psig">Small body at bottom, long upper wick (≥2× body). At the top of a move = sellers rejected higher prices hard. Sell signal at resistance.</div></div>
+      <div class="cg-pattern bear"><div class="cg-pname">🔴 Bearish Engulfing</div><div class="cg-psig">Big red candle completely swallows the previous green candle. Sellers completely took over. One of the most powerful sell signals.</div></div>
+      <div class="cg-pattern bear"><div class="cg-pname">🔴 Bearish Pin Bar</div><div class="cg-psig">Long upper wick (≥2.5× the body) with a small body near the bottom. Price shot up but sellers slammed it back down. Sell signal.</div></div>
+      <div class="cg-pattern bear"><div class="cg-pname">🔴 Bearish Marubozu</div><div class="cg-psig">Big red candle with almost no wicks. Pure seller momentum — nobody pushed back. Strong continuation signal downward.</div></div>
+      <div class="cg-pattern bear"><div class="cg-pname">🔴 Gravestone Doji</div><div class="cg-psig">Opens and closes at the bottom, long upper wick. Sellers rejected the highs completely. Very bearish, especially at resistance.</div></div>
+    </div>
+
+    <div class="cg-section">⚖️ Neutral Patterns — Wait for Confirmation</div>
+    <div class="cg-grid">
+      <div class="cg-pattern neut"><div class="cg-pname">⚪ Doji</div><div class="cg-psig">Open and close are almost equal. Nobody won — bulls and bears fought to a draw. Watch the NEXT candle to see who wins.</div></div>
+      <div class="cg-pattern neut"><div class="cg-pname">⚪ Inside Bar</div><div class="cg-psig">The candle's high and low fit completely inside the previous candle. Market is coiling up. Breakout coming — watch which direction it goes.</div></div>
+      <div class="cg-pattern neut"><div class="cg-pname">⚪ Spinning Top</div><div class="cg-psig">Small body in the middle with wicks on both sides. Indecision. Market tried both directions and came back to center. Wait.</div></div>
+    </div>
+
+    <div class="cg-section">🏰 Supply &amp; Demand Zones</div>
+    <div class="cg-rule"><strong>Demand Zone (Buy Zone)</strong> — A price area where buyers stepped in before. Price shot UP from here in the past. When price returns to this level, buyers often step in again. Look to <strong>BUY</strong> at demand zones.</div>
+    <div class="cg-rule"><strong>Supply Zone (Sell Zone)</strong> — A price area where sellers stepped in before. Price fell DOWN from here in the past. When price returns to this level, sellers often step in again. Look to <strong>SELL SHORT</strong> at supply zones.</div>
+    <div class="cg-rule"><strong>The Rule:</strong> Don't buy at supply (resistance). Don't sell at demand (support). Wait for price to reach the right zone, then look for a candle pattern signal to enter.</div>
+
+    <div class="cg-section">📐 Trend Structure (HH/HL/LH/LL)</div>
+    <div class="cg-rule"><strong>Uptrend = Higher Highs (HH) + Higher Lows (HL)</strong> — Each peak is higher than the last, and each pullback holds higher than the last. Price is making a staircase UP.</div>
+    <div class="cg-rule"><strong>Downtrend = Lower Highs (LH) + Lower Lows (LL)</strong> — Each peak is lower than the last, and each pullback drops lower than the last. Price is making a staircase DOWN.</div>
+    <div class="cg-rule"><strong>Pro tip:</strong> Toggle <strong>📐 Structure</strong> on the chart to see HH/HL/LH/LL labeled automatically. Toggle <strong>🔲 Zones</strong> to see Supply &amp; Demand zones highlighted.</div>
+
+    <div style="text-align:center;margin-top:20px;">
+      <button class="btn btn-primary" onclick="closeCandleGuide()">Got it — Let me Practice! 💕</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
