@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>✨ Barbie Trades ✨</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Pacifico&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --hp: #E91E8C; --mp: #F48FB1; --lp: #FCE4EC; --pp: #FFF0F8;
+  --gold: #F9A825; --up: #26A69A; --down: #EF5350;
+  --text: #880E4F; --border: rgba(233,30,140,0.2);
+}
+body {
+  font-family: 'Nunito', sans-serif;
+  background: linear-gradient(160deg, #FFF0F8 0%, #FCE4EC 50%, #F3E5F5 100%);
+  min-height: 100vh; color: var(--text); overflow-x: hidden;
+}
+.screen { display: none; }
+.screen.active { display: flex; flex-direction: column; }
+
+/* ── WELCOME ── */
+#welcome { align-items: center; justify-content: center; min-height: 100vh; gap: 24px; padding: 36px 20px; }
+.logo { font-family: 'Pacifico', cursive; font-size: 48px; background: linear-gradient(135deg,#E91E8C,#9C27B0); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 4px 16px rgba(233,30,140,.3)); }
+.tagline { font-size: 16px; color: var(--hp); font-weight: 800; letter-spacing: 1px; }
+.divider { width: 80px; height: 3px; background: linear-gradient(90deg,var(--hp),#9C27B0); border-radius: 3px; }
+.stats-row { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+.stat-card { background: white; border: 2px solid var(--border); border-radius: 18px; padding: 18px 24px; text-align: center; box-shadow: 0 6px 24px rgba(233,30,140,.1); min-width: 120px; }
+.stat-value { font-size: 30px; font-weight: 900; color: var(--hp); }
+.stat-label { font-size: 11px; font-weight: 800; color: #AD1457; margin-top: 4px; text-transform: uppercase; letter-spacing: 1px; }
+
+/* ── MODE CARDS ── */
+.mode-cards { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; max-width: 820px; }
+.mode-card {
+  background: white; border: 2.5px solid var(--border); border-radius: 20px; padding: 22px 24px;
+  cursor: pointer; transition: all 0.2s; text-align: center; flex: 1; min-width: 200px; max-width: 240px;
+  box-shadow: 0 4px 16px rgba(233,30,140,.08);
+}
+.mode-card:hover { transform: translateY(-3px); box-shadow: 0 10px 32px rgba(233,30,140,.18); }
+.mode-card.selected { border-color: var(--hp); background: linear-gradient(135deg,#FFF0F8,#FCE4EC); box-shadow: 0 8px 28px rgba(233,30,140,.25); }
+.mode-card .mc-icon { font-size: 36px; margin-bottom: 10px; }
+.mode-card h3 { font-size: 17px; font-weight: 900; color: var(--hp); margin-bottom: 6px; }
+.mode-card p { font-size: 12px; color: #AD1457; line-height: 1.6; }
+.mode-card .mc-badge { display: inline-block; font-size: 10px; font-weight: 800; padding: 3px 10px; border-radius: 20px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+.mc-badge.green  { background: #E8F5E9; color: #2E7D32; }
+.mc-badge.yellow { background: #FFF8E1; color: #F57F17; }
+.mc-badge.red    { background: #FCE4EC; color: #880E4F; }
+
+/* ── TUTORIAL BUTTON ── */
+.tut-btn-wrap { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+
+/* ── BUTTONS ── */
+.btn { font-family: 'Nunito', sans-serif; font-size: 15px; font-weight: 800; border: none; border-radius: 50px; cursor: pointer; padding: 13px 30px; transition: all .2s; letter-spacing: .3px; white-space: nowrap; }
+.btn:disabled { opacity: .45; cursor: not-allowed; transform: none !important; }
+.btn-primary { background: linear-gradient(135deg,#E91E8C,#9C27B0); color: white; box-shadow: 0 6px 24px rgba(233,30,140,.35); }
+.btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 32px rgba(233,30,140,.45); }
+.btn-secondary { background: white; color: var(--hp); border: 2px solid var(--hp); }
+.btn-secondary:hover:not(:disabled) { background: var(--lp); }
+.btn-sm { font-size: 13px; padding: 9px 20px; }
+.btn-up  { background: linear-gradient(135deg,#00796B,#26A69A); color: white; box-shadow: 0 4px 16px rgba(38,166,154,.3); }
+.btn-up:hover  { transform: translateY(-2px); }
+.btn-dn  { background: linear-gradient(135deg,#B71C1C,#EF5350); color: white; box-shadow: 0 4px 16px rgba(239,83,80,.3); }
+.btn-dn:hover  { transform: translateY(-2px); }
+.btn-neu { background: linear-gradient(135deg,#4A148C,#9C27B0); color: white; box-shadow: 0 4px 16px rgba(106,27,154,.3); }
+.btn-neu:hover { transform: translateY(-2px); }
+.btn-hint { background: linear-gradient(135deg,#F9A825,#FFD54F); color: #5D4037; box-shadow: 0 4px 16px rgba(249,168,37,.3); }
+.btn-hint:hover { transform: translateY(-2px); }
+
+/* ── TRAINING SCREEN ── */
+#training { position: fixed; inset: 0; width: 100vw; height: 100vh; overflow: hidden; }
+.training-header { background: white; border-bottom: 2px solid var(--border); padding: 10px 18px; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.training-logo { font-family: 'Pacifico', cursive; font-size: 19px; color: var(--hp); }
+.badge { background: var(--lp); border: 2px solid var(--hp); border-radius: 10px; padding: 3px 11px; font-weight: 800; font-size: 12px; color: var(--hp); }
+.badge.mode-badge { background: linear-gradient(135deg,var(--hp),#9C27B0); color: white; border: none; }
+.session-stats { display: flex; gap: 10px; font-size: 13px; font-weight: 700; color: var(--text); }
+.session-stats span { color: var(--hp); }
+
+/* ── CHART ── */
+.chart-wrap { flex: 1; min-height: 0; position: relative; background: white; overflow: hidden; }
+#chartCanvas { display: block; }
+#priceTooltip { position: absolute; background: rgba(233,30,140,.85); color: white; padding: 3px 9px; border-radius: 8px; font-size: 12px; font-weight: 800; pointer-events: none; display: none; z-index: 10; }
+
+/* ── DRAWING TOOLBAR ── */
+#drawToolbar { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); display: flex; gap: 4px; align-items: center; background: rgba(255,255,255,.95); border: 1.5px solid var(--border); border-radius: 14px; padding: 5px 10px; z-index: 20; box-shadow: 0 4px 16px rgba(233,30,140,.12); flex-wrap: wrap; justify-content: center; }
+.dt-btn { font-family: 'Nunito',sans-serif; font-size: 12px; font-weight: 800; border: 1.5px solid var(--border); border-radius: 8px; padding: 4px 10px; cursor: pointer; background: white; color: var(--text); transition: all .15s; white-space: nowrap; }
+.dt-btn:hover { background: var(--lp); }
+.dt-btn.active { background: var(--hp); color: white; border-color: var(--hp); }
+.dt-sep { width: 1px; height: 20px; background: var(--border); margin: 0 2px; }
+.dt-swatch { width: 18px; height: 18px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: border-color .15s; flex-shrink: 0; }
+.dt-swatch.active { border-color: #880E4F; }
+.dt-label { font-size: 11px; font-weight: 800; color: #AD1457; }
+
+/* ── CONTROL PANEL ── */
+.control-panel { background: white; border-top: 2px solid var(--border); padding: 12px 18px; flex-shrink: 0; }
+.step-dots { display: flex; gap: 8px; margin-bottom: 10px; }
+.step-dot { width: 9px; height: 9px; border-radius: 50%; background: #FCE4EC; border: 2px solid #F48FB1; transition: all .2s; }
+.step-dot.active { background: var(--hp); border-color: var(--hp); transform: scale(1.3); }
+.step-dot.done { background: #26A69A; border-color: #26A69A; }
+.instruction-box { background: linear-gradient(135deg,#FFF0F8,#FCE4EC); border: 1.5px solid var(--border); border-radius: 14px; padding: 11px 15px; margin-bottom: 11px; display: flex; align-items: flex-start; gap: 10px; }
+.inst-icon { font-size: 22px; flex-shrink: 0; line-height: 1; margin-top: 2px; }
+.inst-title { font-size: 14px; font-weight: 900; color: var(--hp); margin-bottom: 3px; }
+.inst-desc { font-size: 12px; color: #AD1457; line-height: 1.55; }
+.action-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+/* ── TUTORIAL OVERLAY ── */
+#tutOverlay {
+  display: none; position: fixed; inset: 0; z-index: 300;
+  background: rgba(233,30,140,.08); backdrop-filter: blur(2px);
+}
+#tutOverlay.show { display: flex; flex-direction: column; }
+.tut-chart-area { flex: 1; min-height: 0; position: relative; background: white; }
+#tutCanvas { display: block; }
+.tut-panel {
+  background: white; border-top: 3px solid var(--hp); padding: 18px 24px;
+  flex-shrink: 0; max-height: 42vh; overflow-y: auto;
+}
+.tut-step-dots { display: flex; gap: 8px; margin-bottom: 12px; justify-content: center; }
+.tut-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--lp); border: 2px solid var(--mp); transition: all .2s; }
+.tut-dot.active { background: var(--hp); border-color: var(--hp); transform: scale(1.3); }
+.tut-dot.done { background: #26A69A; border-color: #26A69A; }
+.tut-title { font-size: 17px; font-weight: 900; color: var(--hp); margin-bottom: 8px; }
+.tut-body { font-size: 13px; color: var(--text); line-height: 1.7; margin-bottom: 14px; }
+.tut-body strong { color: var(--hp); }
+.tut-body .eg { background: var(--lp); border-radius: 10px; padding: 8px 12px; margin-top: 8px; display: block; font-size: 12px; }
+.tut-body .ema-20 { color: #E91E8C; font-weight: 800; }
+.tut-body .ema-50 { color: #F9A825; font-weight: 800; }
+.tut-nav { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.tut-counter { font-size: 12px; font-weight: 800; color: #AD1457; margin-left: auto; }
+
+/* ── RESULT OVERLAY ── */
+#resultOverlay { display: none; position: fixed; inset: 0; background: rgba(233,30,140,.12); backdrop-filter: blur(6px); z-index: 200; align-items: center; justify-content: center; padding: 20px; }
+#resultOverlay.show { display: flex; }
+.result-card { background: white; border-radius: 28px; padding: 32px; max-width: 500px; width: 100%; box-shadow: 0 24px 80px rgba(233,30,140,.22); text-align: center; animation: popIn .4s cubic-bezier(.34,1.56,.64,1); max-height: 90vh; overflow-y: auto; }
+@keyframes popIn { from { transform: scale(.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.result-emoji { font-size: 60px; margin-bottom: 10px; }
+.result-title { font-size: 28px; font-weight: 900; margin-bottom: 6px; }
+.result-title.win { color: #00897B; } .result-title.loss { color: #C62828; }
+.result-sub { font-size: 14px; color: #AD1457; margin-bottom: 18px; }
+.result-metrics { display: flex; gap: 10px; justify-content: center; margin-bottom: 18px; flex-wrap: wrap; }
+.rm { background: #FFF0F8; border-radius: 12px; padding: 10px 14px; font-size: 12px; font-weight: 700; color: #AD1457; }
+.rm .rv { font-size: 18px; font-weight: 900; color: var(--hp); display: block; }
+.lesson-box { background: linear-gradient(135deg,#FFF0F8,#FCE4EC); border: 1.5px solid var(--border); border-radius: 14px; padding: 13px 15px; margin-bottom: 18px; text-align: left; }
+.lesson-box h4 { font-size: 11px; font-weight: 900; color: var(--hp); text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 6px; }
+.lesson-box p { font-size: 13px; color: var(--text); line-height: 1.65; }
+
+/* ── STATS SCREEN ── */
+#stats { padding: 24px 20px; max-width: 720px; margin: 0 auto; gap: 18px; min-height: 100vh; }
+.stats-header { display: flex; align-items: center; gap: 12px; }
+.stats-header h2 { font-family: 'Pacifico', cursive; font-size: 24px; color: var(--hp); }
+.big-stats { display: grid; grid-template-columns: repeat(auto-fit,minmax(130px,1fr)); gap: 12px; }
+.bsc { background: white; border-radius: 18px; padding: 18px; box-shadow: 0 4px 20px rgba(233,30,140,.08); border: 2px solid var(--border); text-align: center; }
+.bsc .bv { font-size: 36px; font-weight: 900; color: var(--hp); }
+.bsc .bl { font-size: 11px; font-weight: 800; color: #AD1457; text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+.trades-list { display: flex; flex-direction: column; gap: 8px; }
+.trade-row { background: white; border-radius: 12px; padding: 12px 16px; display: flex; align-items: center; gap: 12px; border: 1.5px solid var(--border); }
+.trade-row .t-outcome { font-size: 18px; }
+.trade-row .t-info { flex: 1; }
+.trade-row .t-inst { font-size: 13px; font-weight: 800; }
+.trade-row .t-date { font-size: 11px; color: #AD1457; }
+.trade-row .t-rr { font-size: 14px; font-weight: 900; }
+.trade-row .t-rr.win { color: #00897B; } .trade-row .t-rr.loss { color: #C62828; }
+
+/* ── MISC ── */
+select { font-family: 'Nunito',sans-serif; font-size: 13px; font-weight: 700; background: white; border: 2px solid var(--hp); border-radius: 12px; padding: 8px 12px; color: var(--text); cursor: pointer; outline: none; }
+.spinner { width: 44px; height: 44px; border: 4px solid var(--lp); border-top: 4px solid var(--hp); border-radius: 50%; animation: spin .75s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.how-it-works { max-width: 420px; background: white; border-radius: 18px; padding: 18px 24px; border: 2px solid var(--border); box-shadow: 0 4px 20px rgba(233,30,140,.08); text-align: center; font-size: 13px; color: #AD1457; line-height: 1.75; }
+.how-it-works strong { color: var(--hp); }
+@media (max-width: 560px) { .logo { font-size: 36px; } .session-stats { display: none; } .result-card { padding: 20px 16px; } }
+</style>
+</head>
+<body>
+
+<!-- ══════════════ WELCOME ══════════════ -->
+<div id="welcome" class="screen active">
+  <div style="font-size:26px">✨💕✨</div>
+  <div class="logo">Barbie Trades</div>
+  <div class="tagline">💖 Train Your Eye. Become Profitable. 💖</div>
+  <div class="divider"></div>
+
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-value" id="wTotalTrades">0</div><div class="stat-label">Total Trades</div></div>
+    <div class="stat-card"><div class="stat-value" id="wWinRate">—</div><div class="stat-label">Win Rate</div></div>
+    <div class="stat-card"><div class="stat-value" id="wAvgRR">—</div><div class="stat-label">Avg R:R</div></div>
+    <div class="stat-card"><div class="stat-value" id="wStreak">0</div><div class="stat-label">🔥 Streak</div></div>
+  </div>
+
+  <!-- MODE CARDS -->
+  <div class="mode-cards">
+    <div class="mode-card selected" id="mc-beginner" onclick="selectMode('beginner')">
+      <div class="mc-icon">🌸</div>
+      <div class="mc-badge green">Start Here</div>
+      <h3>Beginner</h3>
+      <p>Just identify which way the market is moving. 2 simple questions. Build your eye first.</p>
+    </div>
+    <div class="mode-card" id="mc-intermediate" onclick="selectMode('intermediate')">
+      <div class="mc-icon">💪</div>
+      <div class="mc-badge yellow">Level Up</div>
+      <h3>Intermediate</h3>
+      <p>Place your entry, stop loss & take profit. Tap "Show Me" anytime for a hint.</p>
+    </div>
+    <div class="mode-card" id="mc-advanced" onclick="selectMode('advanced')">
+      <div class="mc-icon">⚡</div>
+      <div class="mc-badge red">Challenge</div>
+      <h3>Advanced</h3>
+      <p>Full trade placement. No hints. Test your real skills on live NQ/ES data.</p>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;align-items:center;">
+    <select id="instrSelect"><option value="NQ=F">NQ — Nasdaq Futures</option><option value="ES=F">ES — S&P 500 Futures</option></select>
+    <select id="tfSelect"><option value="1d">Daily candles</option><option value="1h">1-Hour candles</option></select>
+  </div>
+
+  <div class="tut-btn-wrap">
+    <button class="btn btn-primary" onclick="startTraining()">✨ Start Training Session</button>
+    <button class="btn btn-secondary" onclick="openTutorial()">📖 Watch Tutorial First</button>
+    <button class="btn btn-secondary" onclick="goStats()">📊 My Stats</button>
+  </div>
+
+  <div class="how-it-works">
+    <strong>New here?</strong> Click <strong>Watch Tutorial First</strong> — it walks you through a real trade step by step so you know exactly what you're looking at before you practice on your own. 💕
+  </div>
+</div>
+
+<!-- ══════════════ TRAINING ══════════════ -->
+<div id="training" class="screen">
+  <div class="training-header">
+    <div class="training-logo">✨ Barbie Trades</div>
+    <div class="badge" id="hdrBadge">NQ</div>
+    <div class="badge mode-badge" id="hdrMode">Beginner</div>
+    <div class="session-stats" style="margin-left:auto;">
+      Session: <span id="sWins">0</span>W / <span id="sLosses">0</span>L &nbsp;|&nbsp; Streak: <span id="sStreak">0</span> 🔥
+    </div>
+    <button class="btn btn-secondary btn-sm" onclick="goHome()" style="flex-shrink:0;">← Home</button>
+  </div>
+  <div class="chart-wrap" id="chartWrap">
+    <canvas id="chartCanvas"></canvas>
+    <div id="priceTooltip"></div>
+    <div id="drawToolbar">
+      <span class="dt-label">Draw:</span>
+      <button class="dt-btn" id="dtHLine" onclick="setDrawTool('hline')">― H-Line</button>
+      <button class="dt-btn" id="dtTLine" onclick="setDrawTool('tline')">↗ Trend Line</button>
+      <div class="dt-sep"></div>
+      <span class="dt-label">Color:</span>
+      <div class="dt-swatch active" id="sw0" style="background:#E91E8C" onclick="setDrawColor('#E91E8C',0)"></div>
+      <div class="dt-swatch"        id="sw1" style="background:#F9A825" onclick="setDrawColor('#F9A825',1)"></div>
+      <div class="dt-swatch"        id="sw2" style="background:#26A69A" onclick="setDrawColor('#26A69A',2)"></div>
+      <div class="dt-swatch"        id="sw3" style="background:#EF5350" onclick="setDrawColor('#EF5350',3)"></div>
+      <div class="dt-swatch"        id="sw4" style="background:#9C27B0" onclick="setDrawColor('#9C27B0',4)"></div>
+      <div class="dt-sep"></div>
+      <button class="dt-btn" onclick="undoDrawing()">↩ Undo</button>
+      <button class="dt-btn" onclick="clearDrawings()">🗑 Clear</button>
+    </div>
+  </div>
+  <div class="control-panel">
+    <div class="step-dots" id="stepDots"></div>
+    <div class="instruction-box">
+      <div class="inst-icon" id="iIcon">🎀</div>
+      <div><div class="inst-title" id="iTitle">Loading…</div><div class="inst-desc" id="iDesc"></div></div>
+    </div>
+    <div class="action-row" id="actionRow"></div>
+  </div>
+</div>
+
+<!-- ══════════════ TUTORIAL OVERLAY ══════════════ -->
+<div id="tutOverlay">
+  <div class="tut-chart-area" id="tutChartArea">
+    <canvas id="tutCanvas"></canvas>
+  </div>
+  <div class="tut-panel">
+    <div class="tut-step-dots" id="tutDots"></div>
+    <div class="tut-title" id="tutTitle">Tutorial</div>
+    <div class="tut-body" id="tutBody"></div>
+    <div class="tut-nav">
+      <button class="btn btn-secondary btn-sm" id="tutPrevBtn" onclick="tutNav(-1)">← Back</button>
+      <button class="btn btn-primary"           id="tutNextBtn" onclick="tutNav(1)">Next →</button>
+      <button class="btn btn-secondary btn-sm" onclick="closeTutorial()" style="margin-left:8px;">✕ Close</button>
+      <div class="tut-counter" id="tutCounter"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ STATS ══════════════ -->
+<div id="stats" class="screen">
+  <div class="stats-header">
+    <h2>💕 My Progress</h2>
+    <button class="btn btn-secondary btn-sm" onclick="goHome()" style="margin-left:auto;">← Back</button>
+  </div>
+  <div class="big-stats" id="bigStats"></div>
+  <h3 style="font-size:15px;font-weight:800;color:var(--text);">Recent Trades</h3>
+  <div class="trades-list" id="tradesList"></div>
+</div>
+
+<!-- ══════════════ RESULT OVERLAY ══════════════ -->
+<div id="resultOverlay">
+  <div class="result-card">
+    <div class="result-emoji" id="rEmoji">🎀</div>
+    <div class="result-title" id="rTitle">Winner!</div>
+    <div class="result-sub"   id="rSub"></div>
+    <div class="result-metrics" id="rMetrics"></div>
+    <div class="lesson-box"><h4>💡 Lesson</h4><p id="rLesson"></p></div>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="nextTrade()">✨ Next Trade</button>
+      <button class="btn btn-secondary" onclick="goStats()">📊 Stats</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════
+//  BARBIE TRADES
+// ════════════════════════════════════════════
+const HISTORY = 80, REVEAL = 50;
+const PAD = { top:24, right:78, bottom:40, left:10 };
+
+const app = {
+  phase:'welcome', mode:'beginner',
+  instrument:'NQ=F', tf:'1d',
+  candles:[], winStart:0,
+  trend:null, entry:null, stop:null, target:null,
+  revealIdx:0, revealTimer:null,
+  sWins:0, sLosses:0, sStreak:0,
+  drawings:[], drawTool:null, drawColor:'#E91E8C', drawFirstPt:null, drawPreview:null,
+};
+
+// ── ROUNDRECT POLYFILL ───────────────────────
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function(x,y,w,h,r){
+    this.beginPath();this.moveTo(x+r,y);
+    this.lineTo(x+w-r,y);this.quadraticCurveTo(x+w,y,x+w,y+r);
+    this.lineTo(x+w,y+h-r);this.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+    this.lineTo(x+r,y+h);this.quadraticCurveTo(x,y+h,x,y+h-r);
+    this.lineTo(x,y+r);this.quadraticCurveTo(x,y,x+r,y);this.closePath();
+  };
+}
+
+// ── STATS ────────────────────────────────────
+function loadStats(){ try{return JSON.parse(localStorage.getItem('bt3_stats')||'{"trades":[],"streak":0}');}catch{return{trades:[],streak:0};} }
+function saveStats(s){ localStorage.setItem('bt3_stats',JSON.stringify(s)); }
+function recordTrade(win,rr,inst,date,mode){
+  const s=loadStats();
+  s.trades.unshift({win,rr:parseFloat(rr.toFixed(2)),inst,date,mode,ts:Date.now()});
+  if(s.trades.length>200)s.trades=s.trades.slice(0,200);
+  s.streak=win?(s.streak||0)+1:0;
+  saveStats(s); return s;
+}
+
+// ── EMA ──────────────────────────────────────
+function calcEMA(closes,period){
+  const k=2/(period+1), out=new Array(closes.length).fill(null);
+  if(closes.length<period)return out;
+  let sum=0; for(let i=0;i<period;i++)sum+=closes[i];
+  out[period-1]=sum/period;
+  for(let i=period;i<closes.length;i++)out[i]=closes[i]*k+out[i-1]*(1-k);
+  return out;
+}
+
+// ── DATA FETCH ───────────────────────────────
+async function fetchCandles(instr,tf){
+  const range=tf==='1d'?'4y':'60d';
+  const yfUrl=`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(instr)}?interval=${tf}&range=${range}&includePrePost=false`;
+  const proxies=[`https://api.allorigins.win/raw?url=${encodeURIComponent(yfUrl)}`,`https://corsproxy.io/?${encodeURIComponent(yfUrl)}`];
+  for(const url of proxies){
+    try{
+      const res=await fetch(url,{signal:AbortSignal.timeout(10000)});
+      if(!res.ok)continue;
+      const data=await res.json();
+      const r=data?.chart?.result?.[0]; if(!r)continue;
+      const ts=r.timestamp, q=r.indicators.quote[0], candles=[];
+      for(let i=0;i<ts.length;i++){
+        if(q.open[i]==null||q.close[i]==null||q.high[i]==null||q.low[i]==null)continue;
+        candles.push({t:new Date(ts[i]*1000),o:+q.open[i].toFixed(2),h:+q.high[i].toFixed(2),l:+q.low[i].toFixed(2),c:+q.close[i].toFixed(2),v:q.volume[i]||0});
+      }
+      if(candles.length>=HISTORY+REVEAL+20)return candles;
+    }catch(e){}
+  }
+  throw new Error('Could not load data. Check internet and try again.');
+}
+
+// ── CHART HELPERS ────────────────────────────
+function p2y(price,minP,maxP,H){ return PAD.top+(1-(price-minP)/(maxP-minP))*(H-PAD.top-PAD.bottom); }
+
+function getPriceRange(slice, extra=[]){
+  let minP=Math.min(...slice.map(c=>c.l)), maxP=Math.max(...slice.map(c=>c.h));
+  extra.filter(Boolean).forEach(p=>{minP=Math.min(minP,p);maxP=Math.max(maxP,p);});
+  const pad=(maxP-minP)*0.07; return {minP:minP-pad,maxP:maxP+pad};
+}
+
+function sizeCanvas(canvasId='chartCanvas', wrapId='chartWrap'){
+  const wrap=document.getElementById(wrapId), canvas=document.getElementById(canvasId);
+  canvas.width=wrap.clientWidth; canvas.height=wrap.clientHeight;
+}
+
+// ── SWING DETECTION ──────────────────────────
+function detectSwingLow(candles,endIdx,lb=15){
+  let min=Infinity;
+  for(let i=Math.max(0,endIdx-lb);i<=endIdx;i++) if(candles[i].l<min)min=candles[i].l;
+  return +(min*0.9975).toFixed(2);
+}
+function detectSwingHigh(candles,endIdx,lb=15){
+  let max=-Infinity;
+  for(let i=Math.max(0,endIdx-lb);i<=endIdx;i++) if(candles[i].h>max)max=candles[i].h;
+  return +(max*1.0025).toFixed(2);
+}
+function showMeLevels(){
+  const isLong=app.trend!=='bearish';
+  const idx=app.winStart+HISTORY;
+  app.entry=+app.candles[idx].c.toFixed(2);
+  if(isLong){
+    app.stop=detectSwingLow(app.candles,idx,15);
+    app.target=+(app.entry+Math.abs(app.entry-app.stop)*2).toFixed(2);
+  } else {
+    app.stop=detectSwingHigh(app.candles,idx,15);
+    app.target=+(app.entry-Math.abs(app.stop-app.entry)*2).toFixed(2);
+  }
+  setPhase('confirm');
+}
+
+// ── MAIN CHART DRAW ──────────────────────────
+function drawChart(visCount, canvasId='chartCanvas'){
+  const canvas=document.getElementById(canvasId);
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width, H=canvas.height;
+  const slice=app.candles.slice(app.winStart,app.winStart+visCount);
+  if(!slice.length)return;
+
+  const closes=slice.map(c=>c.c);
+  const ema20=calcEMA(closes,20), ema50=calcEMA(closes,50);
+  const {minP,maxP}=getPriceRange(slice,[app.entry,app.stop,app.target]);
+  const candleW=Math.max((W-PAD.left-PAD.right)/slice.length,2);
+  const bodyW=Math.max(candleW*0.65,1.5);
+
+  ctx.fillStyle='#FFFFFF'; ctx.fillRect(0,0,W,H);
+
+  // Grid
+  for(let i=0;i<=6;i++){
+    const p=minP+(maxP-minP)*(i/6), y=p2y(p,minP,maxP,H);
+    ctx.strokeStyle='#FFF0F8'; ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(PAD.left,y);ctx.lineTo(W-PAD.right,y);ctx.stroke();
+    ctx.fillStyle='#F48FB1'; ctx.font='10px Nunito,sans-serif'; ctx.textAlign='right';
+    ctx.fillText(p.toFixed(0),W-2,y+4);
+  }
+
+  // EMAs
+  const drawEMALine=(vals,color)=>{
+    ctx.strokeStyle=color; ctx.lineWidth=1.8; ctx.setLineDash([]);
+    ctx.beginPath(); let s=false;
+    for(let i=0;i<vals.length;i++){
+      if(vals[i]==null)continue;
+      const x=PAD.left+i*candleW+candleW/2, y=p2y(vals[i],minP,maxP,H);
+      if(!s){ctx.moveTo(x,y);s=true;}else ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+  };
+  drawEMALine(ema20,'#E91E8C'); drawEMALine(ema50,'#F9A825');
+
+  // Candles
+  for(let i=0;i<slice.length;i++){
+    const c=slice[i], isUp=c.c>=c.o, color=isUp?'#26A69A':'#EF5350';
+    const x=PAD.left+i*candleW+(candleW-bodyW)/2, cx=x+bodyW/2;
+    const topB=p2y(Math.max(c.o,c.c),minP,maxP,H), botB=p2y(Math.min(c.o,c.c),minP,maxP,H);
+    ctx.strokeStyle=color; ctx.lineWidth=Math.max(candleW*0.12,0.8);
+    ctx.beginPath();ctx.moveTo(cx,p2y(c.h,minP,maxP,H));ctx.lineTo(cx,p2y(c.l,minP,maxP,H));ctx.stroke();
+    ctx.fillStyle=color; ctx.fillRect(x,topB,bodyW,Math.max(botB-topB,1));
+  }
+
+  // NOW line
+  if(['trend','entry','stop','target','confirm','bq_buy','bq_stay'].includes(app.phase)){
+    const nx=PAD.left+HISTORY*candleW+candleW/2;
+    ctx.strokeStyle='#E91E8C'; ctx.lineWidth=1.5; ctx.setLineDash([5,4]);
+    ctx.beginPath();ctx.moveTo(nx,PAD.top);ctx.lineTo(nx,H-PAD.bottom);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='#E91E8C'; ctx.font='bold 10px Nunito,sans-serif'; ctx.textAlign='left';
+    ctx.fillText('NOW →',nx+4,PAD.top+13);
+  }
+
+  // Trade lines
+  if(app.entry!==null)drawHLine(ctx,app.entry,'#E91E8C','ENTRY',minP,maxP,W,H);
+  if(app.stop!==null) drawHLine(ctx,app.stop,'#EF5350','STOP',minP,maxP,W,H);
+  if(app.target!==null)drawHLine(ctx,app.target,'#26A69A','TARGET',minP,maxP,W,H);
+
+  // R:R shading
+  if(app.entry&&app.stop&&app.target){
+    const x0=PAD.left+(slice.length-1)*candleW, x1=W-PAD.right;
+    const eY=p2y(app.entry,minP,maxP,H), sY=p2y(app.stop,minP,maxP,H), tY=p2y(app.target,minP,maxP,H);
+    ctx.fillStyle='rgba(239,83,80,.07)'; ctx.fillRect(x0,Math.min(eY,sY),x1-x0,Math.abs(sY-eY));
+    ctx.fillStyle='rgba(38,166,154,.07)'; ctx.fillRect(x0,Math.min(eY,tY),x1-x0,Math.abs(tY-eY));
+  }
+
+  // User drawings
+  renderDrawings(ctx,minP,maxP,W,H,visCount);
+
+  // Legend
+  ctx.font='bold 10px Nunito,sans-serif'; ctx.textAlign='left';
+  ctx.fillStyle='#E91E8C'; ctx.fillText('─ EMA 20',PAD.left+4,16);
+  ctx.fillStyle='#F9A825'; ctx.fillText('─ EMA 50',PAD.left+68,16);
+
+  // Time labels
+  ctx.fillStyle='#F48FB1'; ctx.font='10px Nunito,sans-serif'; ctx.textAlign='center';
+  const le=Math.max(1,Math.floor(slice.length/7));
+  for(let i=0;i<slice.length;i+=le){
+    const c=slice[i], x=PAD.left+i*candleW+candleW/2;
+    const lbl=app.tf==='1d'?c.t.toLocaleDateString('en-US',{month:'short',day:'numeric'}):c.t.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+    ctx.fillText(lbl,x,H-6);
+  }
+}
+
+function drawHLine(ctx,price,color,label,minP,maxP,W,H){
+  const y=p2y(price,minP,maxP,H);
+  ctx.strokeStyle=color; ctx.lineWidth=1.4; ctx.setLineDash([6,3]);
+  ctx.beginPath();ctx.moveTo(PAD.left,y);ctx.lineTo(W-PAD.right,y);ctx.stroke();ctx.setLineDash([]);
+  const lW=76,lH=18,lX=W-PAD.right-lW-2;
+  ctx.fillStyle=color; ctx.roundRect(lX,y-lH/2,lW,lH,5); ctx.fill();
+  ctx.fillStyle='white'; ctx.font='bold 10px Nunito,sans-serif'; ctx.textAlign='center';
+  ctx.fillText(`${label} ${price.toFixed(0)}`,lX+lW/2,y+4);
+}
+
+// ── DRAWINGS ─────────────────────────────────
+function renderDrawings(ctx,minP,maxP,W,H,visCount){
+  const candleW=(W-PAD.left-PAD.right)/visCount;
+  app.drawings.forEach(d=>{
+    ctx.strokeStyle=d.color; ctx.lineWidth=1.6; ctx.setLineDash([]);
+    if(d.type==='hline'){
+      const y=p2y(d.price,minP,maxP,H);
+      if(y<PAD.top||y>H-PAD.bottom)return;
+      ctx.beginPath();ctx.moveTo(PAD.left,y);ctx.lineTo(W-PAD.right,y);ctx.stroke();
+      ctx.fillStyle=d.color; ctx.font='bold 10px Nunito,sans-serif'; ctx.textAlign='right';
+      ctx.fillText(d.price.toFixed(0),W-PAD.right-2,y-3);
+    }
+    if(d.type==='tline'){
+      const r1=d.idx1-app.winStart, r2=d.idx2-app.winStart;
+      const x1=PAD.left+r1*candleW+candleW/2, x2=PAD.left+r2*candleW+candleW/2;
+      const y1=p2y(d.price1,minP,maxP,H), y2=p2y(d.price2,minP,maxP,H);
+      const dx=x2-x1,dy=y2-y1,len=Math.sqrt(dx*dx+dy*dy)||1,ext=30;
+      ctx.beginPath();ctx.moveTo(x1-(dx/len)*ext,y1-(dy/len)*ext);ctx.lineTo(x2+(dx/len)*ext,y2+(dy/len)*ext);ctx.stroke();
+    }
+  });
+  if(app.drawTool==='tline'&&app.drawFirstPt&&app.drawPreview){
+    const r1=app.drawFirstPt.candleIdx-app.winStart;
+    const x1=PAD.left+r1*candleW+candleW/2, y1=p2y(app.drawFirstPt.price,minP,maxP,H);
+    ctx.strokeStyle=app.drawColor; ctx.lineWidth=1.4; ctx.setLineDash([5,3]);
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(app.drawPreview.x,app.drawPreview.y);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle=app.drawColor;ctx.beginPath();ctx.arc(x1,y1,4,0,Math.PI*2);ctx.fill();
+  }
+}
+
+// ── CANVAS INTERACTION ───────────────────────
+function yToPrice(clientY,canvasId='chartCanvas'){
+  const canvas=document.getElementById(canvasId);
+  const rect=canvas.getBoundingClientRect();
+  const yPx=(clientY-rect.top)*(canvas.height/rect.height);
+  const slice=app.candles.slice(app.winStart,app.winStart+HISTORY+1);
+  const {minP,maxP}=getPriceRange(slice,[app.entry,app.stop,app.target]);
+  return +(maxP-((yPx-PAD.top)/(canvas.height-PAD.top-PAD.bottom))*(maxP-minP)).toFixed(2);
+}
+function xToCandle(clientX){
+  const canvas=document.getElementById('chartCanvas'), rect=canvas.getBoundingClientRect();
+  const xPx=(clientX-rect.left)*(canvas.width/rect.width);
+  const visCount=HISTORY+1+app.revealIdx;
+  const candleW=(canvas.width-PAD.left-PAD.right)/visCount;
+  return app.winStart+Math.max(0,Math.min(visCount-1,Math.round((xPx-PAD.left)/candleW)));
+}
+
+document.getElementById('chartCanvas').addEventListener('click',e=>{
+  if(app.drawTool){
+    const price=yToPrice(e.clientY), candleIdx=xToCandle(e.clientX);
+    if(app.drawTool==='hline'){
+      app.drawings.push({type:'hline',price,color:app.drawColor});
+    } else if(app.drawTool==='tline'){
+      if(!app.drawFirstPt){ app.drawFirstPt={candleIdx,price}; }
+      else{ app.drawings.push({type:'tline',idx1:app.drawFirstPt.candleIdx,price1:app.drawFirstPt.price,idx2:candleIdx,price2:price,color:app.drawColor}); app.drawFirstPt=null; app.drawPreview=null; }
+    }
+    drawChart(HISTORY+1+app.revealIdx); return;
+  }
+  if(!['entry','stop','target'].includes(app.phase))return;
+  const price=yToPrice(e.clientY);
+  if(app.phase==='entry'){app.entry=price;setPhase('stop');}
+  else if(app.phase==='stop'){app.stop=price;setPhase('target');}
+  else if(app.phase==='target'){app.target=price;setPhase('confirm');}
+});
+
+document.getElementById('chartCanvas').addEventListener('mousemove',e=>{
+  const tt=document.getElementById('priceTooltip');
+  const canvas=document.getElementById('chartCanvas'), rect=canvas.getBoundingClientRect();
+  const price=yToPrice(e.clientY);
+  if(app.drawTool==='tline'&&app.drawFirstPt){
+    app.drawPreview={x:(e.clientX-rect.left)*(canvas.width/rect.width),y:(e.clientY-rect.top)*(canvas.height/rect.height)};
+    drawChart(HISTORY+1+app.revealIdx);
+  }
+  const show=app.drawTool||['entry','stop','target'].includes(app.phase);
+  if(!show){tt.style.display='none';return;}
+  tt.style.display='block'; tt.style.left=(e.clientX-rect.left+14)+'px'; tt.style.top=(e.clientY-rect.top-12)+'px'; tt.textContent=price.toFixed(0);
+});
+document.getElementById('chartCanvas').addEventListener('mouseleave',()=>{
+  document.getElementById('priceTooltip').style.display='none';
+  if(app.drawTool==='tline'&&app.drawFirstPt){app.drawPreview=null;drawChart(HISTORY+1+app.revealIdx);}
+});
+
+// ── DRAWING CONTROLS ─────────────────────────
+function setDrawTool(t){
+  app.drawTool=app.drawTool===t?null:t; app.drawFirstPt=null; app.drawPreview=null;
+  document.getElementById('dtHLine').classList.toggle('active',app.drawTool==='hline');
+  document.getElementById('dtTLine').classList.toggle('active',app.drawTool==='tline');
+  document.getElementById('chartCanvas').style.cursor=app.drawTool?'crosshair':'default';
+}
+function setDrawColor(c,idx){ app.drawColor=c; document.querySelectorAll('.dt-swatch').forEach((s,i)=>s.classList.toggle('active',i===idx)); }
+function undoDrawing(){ app.drawFirstPt=null; app.drawPreview=null; if(app.drawings.length)app.drawings.pop(); drawChart(HISTORY+1+app.revealIdx); }
+function clearDrawings(){ app.drawings=[]; app.drawFirstPt=null; app.drawPreview=null; drawChart(HISTORY+1+app.revealIdx); }
+
+// ════════════════════════════════════════════
+//  PHASE CONFIGS
+// ════════════════════════════════════════════
+
+// ── BEGINNER PHASES (2 questions) ────────────
+const BEG = {
+  bq_trend:{
+    dots:2, step:1,
+    icon:'🔍', title:'Which way is this market moving?',
+    desc(){
+      return `Look at the two lines on the chart:<br>
+<span class="ema-20">• Pink line (EMA 20)</span> = average of last 20 candles — moves fast<br>
+<span class="ema-50">• Gold line (EMA 50)</span> = average of last 50 candles — moves slow<br><br>
+<strong>Pink ABOVE gold + both going UP</strong> → market is rising → Bullish<br>
+<strong>Pink BELOW gold + both going DOWN</strong> → market is falling → Bearish<br>
+<strong>Lines crossing/flat/tangled</strong> → no clear direction → Sideways`;
+    },
+    actions(){ return `
+      <button class="btn btn-up"  onclick="chooseTrend('bullish')">📈 Bullish — Going Up</button>
+      <button class="btn btn-dn"  onclick="chooseTrend('bearish')">📉 Bearish — Going Down</button>
+      <button class="btn btn-neu" onclick="chooseTrend('sideways')">↔️ Sideways — No Clear Trend</button>`; }
+  },
+  bq_buy:{
+    dots:2, step:2,
+    icon:'💭', title:'Based on that — what would you do?',
+    desc(){
+      const t=app.trend;
+      return t==='bullish'
+        ? `You said the market is going <strong>UP</strong>. So you'd want to <strong>BUY</strong> — profit when price rises.<br><br>But sometimes even in an uptrend, price is <em>too extended</em> — it's already gone way up and you've missed the move. Would you still enter here, or wait?`
+        : t==='bearish'
+        ? `You said the market is going <strong>DOWN</strong>. So you'd want to <strong>SELL SHORT</strong> — profit when price falls.<br><br>Look at where the "NOW →" line is. Is price right at the EMA? Or has it already fallen a long way?`
+        : `You said the market looks <strong>sideways</strong>. Smart call — in a choppy market, the safest move is to sit out. No trade = no loss.`;
+    },
+    actions(){
+      const t=app.trend;
+      if(t==='sideways')return `<button class="btn btn-neu" onclick="begReveal('stay')">✅ Stay Out — No Trade</button>`;
+      return `
+        <button class="btn btn-up" onclick="begReveal('long')">📈 Buy (Go Long)</button>
+        <button class="btn btn-dn" onclick="begReveal('short')">📉 Sell Short (Go Short)</button>
+        <button class="btn btn-neu" onclick="begReveal('stay')">↔️ Stay Out</button>`;
+    }
+  },
+  bq_revealing:{ dots:2, step:2, icon:'👀', title:'Watching what happens next…', desc(){return 'The candles are revealing one by one. Watch where the market goes after the NOW line.';}, actions(){return '';} },
+};
+
+// ── INTERMEDIATE / ADVANCED PHASES ───────────
+const ADV = {
+  trend:{
+    dots:5, step:1, icon:'🔍', title:'Step 1 — Which way is this market moving?',
+    desc(){
+      return `Look at the two lines:<br>
+<span class="ema-20">Pink (EMA 20)</span> = fast average &nbsp;|&nbsp; <span class="ema-50">Gold (EMA 50)</span> = slow average<br><br>
+<strong>Pink ABOVE gold + both going UP</strong> → Uptrend → Bullish<br>
+<strong>Pink BELOW gold + both going DOWN</strong> → Downtrend → Bearish<br>
+<strong>Lines tangled / flat</strong> → Sideways → no trade`;
+    },
+    actions(){ return `
+      <button class="btn btn-up"  onclick="chooseTrend('bullish')">📈 Bullish — Going Up</button>
+      <button class="btn btn-dn"  onclick="chooseTrend('bearish')">📉 Bearish — Going Down</button>
+      <button class="btn btn-neu" onclick="chooseTrend('sideways')">↔️ Sideways</button>`; }
+  },
+  entry:{
+    dots:5, step:2, icon:'🎯', title:'Step 2 — Click your ENTRY price on the chart',
+    desc(){
+      const isLong=app.trend!=='bearish';
+      return isLong
+        ? `You picked <strong style="color:#26A69A">Bullish (going UP)</strong> — you are buying.<br>Click near the current price (right of "NOW →"). <strong>Best entries are when price has just pulled back to touch the pink EMA 20 line.</strong>`
+        : `You picked <strong style="color:#EF5350">Bearish (going DOWN)</strong> — you are selling short.<br>Click near the current price (right of "NOW →"). <strong>Best entries are when price bounced up to touch EMA 20 from below.</strong>`;
+    },
+    actions(){
+      const hints=app.mode==='intermediate'?`<button class="btn btn-hint" onclick="showMeLevels()">💡 Show Me Suggested Levels</button>`:'';
+      return `${hints}<button class="btn btn-secondary btn-sm" onclick="resetLevels()">↩ Start Over</button>`;
+    }
+  },
+  stop:{
+    dots:5, step:3, icon:'🛑', title:'Step 3 — Click your STOP LOSS',
+    desc(){
+      const isLong=app.trend!=='bearish';
+      return isLong
+        ? `Stop loss = the price where you admit you were wrong and exit.<br><br>You are <strong style="color:#26A69A">BUYING (going up)</strong> — so stop goes <strong>BELOW your entry</strong>.<br>Click somewhere <strong>below</strong> where you placed your entry.<br><em>Tip: put it just below the most recent swing low (lowest point you can see).</em>`
+        : `Stop loss = the price where you admit you were wrong and exit.<br><br>You are <strong style="color:#EF5350">SELLING SHORT (going down)</strong> — so stop goes <strong>ABOVE your entry</strong>.<br>Click somewhere <strong>above</strong> where you placed your entry.<br><em>Tip: put it just above the most recent swing high (highest point you can see).</em>`;
+    },
+    actions(){ return `<button class="btn btn-secondary btn-sm" onclick="backToEntry()">← Back to Entry</button>`; }
+  },
+  target:{
+    dots:5, step:4, icon:'💰', title:'Step 4 — Click your TAKE PROFIT',
+    desc(){
+      const isLong=app.trend!=='bearish';
+      const risk=app.entry&&app.stop?Math.abs(app.entry-app.stop).toFixed(0):'?';
+      const min2R=app.entry&&app.stop?(isLong?(app.entry+Math.abs(app.entry-app.stop)*2).toFixed(0):(app.entry-Math.abs(app.entry-app.stop)*2).toFixed(0)):'?';
+      return isLong
+        ? `Take profit = where you cash out your winnings.<br><br>You are <strong style="color:#26A69A">BUYING</strong> — so target goes <strong>ABOVE your entry</strong>.<br>Your risk = <strong>${risk} pts</strong>. Aim for at least <strong style="color:#26A69A">${min2R}</strong> (2× your risk).<br><em>Rule: target must be at least 2× your risk to be worth the trade.</em>`
+        : `Take profit = where you cash out your winnings.<br><br>You are <strong style="color:#EF5350">SELLING SHORT</strong> — so target goes <strong>BELOW your entry</strong>.<br>Your risk = <strong>${risk} pts</strong>. Aim for at least <strong style="color:#26A69A">${min2R}</strong> (2× your risk).<br><em>Rule: target must be at least 2× your risk to be worth the trade.</em>`;
+    },
+    actions(){ return `<button class="btn btn-secondary btn-sm" onclick="backToStop()">← Back to Stop</button>`; }
+  },
+  confirm:{
+    dots:5, step:5, icon:'💖', title:'Step 5 — Review your trade',
+    desc(){
+      if(!app.entry||!app.stop||!app.target)return 'Set all three levels first.';
+      const isLong=app.entry>app.stop;
+      const risk=Math.abs(app.entry-app.stop), reward=Math.abs(app.target-app.entry), rr=reward/risk;
+      const dir=isLong?'<span style="color:#26A69A">LONG — Buying 📈</span>':'<span style="color:#EF5350">SHORT — Selling 📉</span>';
+      const stopWrong=(isLong&&app.stop>app.entry)||(!isLong&&app.stop<app.entry);
+      const tgtWrong=(isLong&&app.target<app.entry)||(!isLong&&app.target>app.entry);
+      let w='';
+      if(stopWrong) w+=`<br>⚠️ <strong style="color:#E53935">Stop is on wrong side!</strong> For a ${isLong?'long':'short'}, stop goes ${isLong?'BELOW':'ABOVE'} entry. ↩ Reset.`;
+      if(tgtWrong)  w+=`<br>⚠️ <strong style="color:#E53935">Target is on wrong side!</strong> For a ${isLong?'long':'short'}, target goes ${isLong?'ABOVE':'BELOW'} entry. ↩ Reset.`;
+      if(!w&&rr<2)  w+=`<br>💡 R:R = <strong>${rr.toFixed(2)}:1</strong> — try to get 2:1 or higher. Move target further.`;
+      return `Direction: <strong>${dir}</strong><br>Risk: <strong>${risk.toFixed(0)} pts</strong> → Reward: <strong>${reward.toFixed(0)} pts</strong> → R:R: <strong style="color:${rr>=2?'#26A69A':'#E91E8C'}">${rr.toFixed(2)}:1 ${rr>=2?'✅':'⚠️'}</strong>${w}`;
+    },
+    actions(){ return `
+      <button class="btn btn-primary" onclick="startReveal()">✨ See What Happened!</button>
+      <button class="btn btn-secondary btn-sm" onclick="resetLevels()">↩ Reset Levels</button>`; }
+  },
+};
+
+// ── PHASE ROUTING ────────────────────────────
+function phaseConfig(phase){
+  if(BEG[phase])return BEG[phase];
+  if(ADV[phase])return ADV[phase];
+  return null;
+}
+
+function setPhase(phase){
+  app.phase=phase;
+  const cfg=phaseConfig(phase); if(!cfg)return;
+  const dotCount=cfg.dots||5;
+  let dotsHtml='';
+  for(let i=1;i<=dotCount;i++){
+    let cls='step-dot';
+    if(i<cfg.step)cls+=' done';
+    else if(i===cfg.step)cls+=' active';
+    dotsHtml+=`<div class="${cls}"></div>`;
+  }
+  document.getElementById('stepDots').innerHTML=dotsHtml;
+  document.getElementById('iIcon').textContent=cfg.icon;
+  document.getElementById('iTitle').textContent=cfg.title;
+  document.getElementById('iDesc').innerHTML=typeof cfg.desc==='function'?cfg.desc():cfg.desc;
+  document.getElementById('actionRow').innerHTML=typeof cfg.actions==='function'?cfg.actions():'';
+  const vis=HISTORY+1+(['trend','entry','stop','target','confirm','bq_trend','bq_buy','bq_stay'].includes(phase)?0:app.revealIdx);
+  drawChart(vis);
+}
+
+// ── CONTROLS ─────────────────────────────────
+function chooseTrend(t){ app.trend=t; app.entry=app.stop=app.target=null; setPhase(app.mode==='beginner'?'bq_buy':'entry'); }
+function resetLevels(){ app.entry=app.stop=app.target=null; setPhase('entry'); }
+function backToEntry(){ app.stop=app.target=null; setPhase('entry'); }
+function backToStop(){ app.target=null; setPhase('stop'); }
+
+// ── BEGINNER REVEAL ──────────────────────────
+function begReveal(decision){
+  app.entry=null; app.stop=null; app.target=null;
+  const isLong=decision==='long';
+  if(decision!=='stay'){
+    const idx=app.winStart+HISTORY;
+    app.entry=app.candles[idx].c;
+    if(isLong){ app.stop=detectSwingLow(app.candles,idx,15); app.target=+(app.entry+Math.abs(app.entry-app.stop)*2).toFixed(2); }
+    else       { app.stop=detectSwingHigh(app.candles,idx,15); app.target=+(app.entry-Math.abs(app.stop-app.entry)*2).toFixed(2); }
+  }
+  app.revealIdx=0; app.phase='bq_revealing';
+  setPhase('bq_revealing');
+  const totalBase=HISTORY+1;
+  const actualTrend=detectTrend();
+  let hitResult=null;
+  app.revealTimer=setInterval(()=>{
+    app.revealIdx++;
+    drawChart(totalBase+app.revealIdx);
+    const c=app.candles[app.winStart+totalBase+app.revealIdx-1];
+    if(!c||app.revealIdx>=REVEAL){ clearInterval(app.revealTimer); showBegResult(decision,actualTrend,hitResult); return; }
+    if(!hitResult&&decision!=='stay'){
+      if(isLong){ if(c.l<=app.stop)hitResult={win:false}; else if(c.h>=app.target)hitResult={win:true}; }
+      else       { if(c.h>=app.stop)hitResult={win:false}; else if(c.l<=app.target)hitResult={win:true}; }
+      if(hitResult){clearInterval(app.revealTimer);showBegResult(decision,actualTrend,hitResult);}
+    }
+  },75);
+}
+
+function showBegResult(decision,actualTrend,hit){
+  const trendCorrect=(app.trend==='bullish'&&actualTrend==='up')||(app.trend==='bearish'&&actualTrend==='down')||(app.trend==='sideways'&&actualTrend==='flat');
+  const dirCorrect=(decision==='long'&&actualTrend==='up')||(decision==='short'&&actualTrend==='down')||(decision==='stay'&&actualTrend==='flat');
+  const win = decision==='stay'?trendCorrect:(hit?.win??false);
+  if(win){app.sWins++;app.sStreak++;}else{app.sLosses++;app.sStreak=0;}
+  document.getElementById('sWins').textContent=app.sWins;
+  document.getElementById('sLosses').textContent=app.sLosses;
+  document.getElementById('sStreak').textContent=app.sStreak;
+  const date=app.candles[app.winStart+HISTORY]?.t.toLocaleDateString()||'';
+  recordTrade(win,2,app.instrument,date,'beginner');
+  const tStr=actualTrend==='up'?'uptrend':actualTrend==='down'?'downtrend':'sideways';
+  let lesson='';
+  if(!trendCorrect)lesson=`The market was actually in a ${tStr}. Look at the EMAs: pink above gold + both sloping up = uptrend. Pink below gold + both sloping down = downtrend. Practice spotting this pattern every session.`;
+  else if(trendCorrect&&!dirCorrect)lesson=`You read the trend correctly! But the trade direction didn't match. In an uptrend → BUY. In a downtrend → SELL SHORT. In sideways → stay out.`;
+  else if(win)lesson=`Perfect read! You got the trend AND the direction right. This is the foundation of every trade. Keep drilling this pattern recognition every day.`;
+  else lesson=`Good trend read! The direction was right but the market didn't follow through in the reveal window. This happens — not every good setup pays off immediately. Stay consistent.`;
+  document.getElementById('rEmoji').textContent=win?'🎉':'💪';
+  const rTitle=document.getElementById('rTitle');
+  rTitle.textContent=win?'Correct! 💕':'Keep Learning!';
+  rTitle.className=`result-title ${win?'win':'loss'}`;
+  document.getElementById('rSub').textContent=`Actual trend: ${tStr.toUpperCase()} | Your call: ${app.trend?.toUpperCase()} | Decision: ${decision.toUpperCase()}`;
+  document.getElementById('rMetrics').innerHTML=`
+    <div class="rm"><span class="rv">${trendCorrect?'✅':'❌'}</span>Trend Read</div>
+    <div class="rm"><span class="rv">${dirCorrect?'✅':'❌'}</span>Direction</div>
+    <div class="rm"><span class="rv">${win?'Win':'Miss'}</span>Result</div>`;
+  document.getElementById('rLesson').textContent=lesson;
+  app.phase='result';
+  document.getElementById('resultOverlay').classList.add('show');
+}
+
+// ── FULL TRADE REVEAL ─────────────────────────
+function startReveal(){
+  if(!app.entry||!app.stop||!app.target)return;
+  app.revealIdx=0; app.phase='revealing';
+  const base=HISTORY+1, isLong=app.entry>app.stop;
+  let hit=null;
+  app.revealTimer=setInterval(()=>{
+    app.revealIdx++;
+    drawChart(base+app.revealIdx);
+    const c=app.candles[app.winStart+base+app.revealIdx-1];
+    if(!c){clearInterval(app.revealTimer);showResult(hit,true);return;}
+    if(!hit){
+      if(isLong){if(c.l<=app.stop)hit={win:false};else if(c.h>=app.target)hit={win:true};}
+      else     {if(c.h>=app.stop)hit={win:false};else if(c.l<=app.target)hit={win:true};}
+    }
+    if(hit||app.revealIdx>=REVEAL){clearInterval(app.revealTimer);showResult(hit,app.revealIdx>=REVEAL&&!hit);}
+  },75);
+}
+
+function showResult(hit,noHit){
+  const isLong=app.entry>app.stop;
+  const risk=Math.abs(app.entry-app.stop), reward=Math.abs(app.target-app.entry), rr=reward/risk;
+  const win=hit?.win??false;
+  if(win){app.sWins++;app.sStreak++;}else{app.sLosses++;app.sStreak=0;}
+  document.getElementById('sWins').textContent=app.sWins;
+  document.getElementById('sLosses').textContent=app.sLosses;
+  document.getElementById('sStreak').textContent=app.sStreak;
+  const date=app.candles[app.winStart+HISTORY]?.t.toLocaleDateString()||'';
+  recordTrade(win,parseFloat(rr.toFixed(2)),app.instrument,date,app.mode);
+  const actual=detectTrend();
+  const trendOk=(app.trend==='bullish'&&actual==='up')||(app.trend==='bearish'&&actual==='down')||(app.trend==='sideways'&&actual==='flat');
+  document.getElementById('rEmoji').textContent=win?'🎉':'💪';
+  const rTitle=document.getElementById('rTitle');
+  rTitle.textContent=win?'Winner! 💕':'Learning Moment';
+  rTitle.className=`result-title ${win?'win':'loss'}`;
+  document.getElementById('rSub').textContent=win?`Your ${app.trend} read paid off — target hit!`:noHit?`Price didn't reach target or stop in ${REVEAL} candles.`:`Stop was hit before target. That's okay — it's part of trading.`;
+  document.getElementById('rMetrics').innerHTML=`
+    <div class="rm"><span class="rv">${trendOk?'✅':'❌'}</span>Trend Read</div>
+    <div class="rm"><span class="rv">${isLong?'Long':'Short'}</span>Direction</div>
+    <div class="rm"><span class="rv">${rr.toFixed(2)}:1</span>R:R Ratio</div>
+    <div class="rm"><span class="rv">${win?'✅ Win':'❌ Loss'}</span>Outcome</div>`;
+  document.getElementById('rLesson').textContent=buildLesson(win,trendOk,isLong,rr,actual,noHit);
+  app.phase='result';
+  document.getElementById('resultOverlay').classList.add('show');
+}
+
+function detectTrend(){
+  const closes=app.candles.slice(app.winStart,app.winStart+HISTORY).map(c=>c.c);
+  const e20=calcEMA(closes,20), e50=calcEMA(closes,50);
+  const l20=e20[e20.length-1], l50=e50[e50.length-1];
+  if(!l20||!l50)return'flat';
+  if(l20>l50*1.0015)return'up'; if(l20<l50*0.9985)return'down'; return'flat';
+}
+
+function buildLesson(win,trendOk,isLong,rr,actual,noHit){
+  const ts=actual==='up'?'uptrend':actual==='down'?'downtrend':'sideways/choppy market';
+  if(!trendOk&&!win)return `The market was in a ${ts}. Rule #1: only trade in the direction of the trend. EMA 20 above EMA 50 and rising = long only. Below and falling = short only.`;
+  if(trendOk&&!win&&rr<1.5)return `Right trend but R:R was only ${rr.toFixed(2)}:1 — too low. You need 2:1 minimum to be profitable over time. Move your target further or tighten your stop.`;
+  if(trendOk&&!win&&noHit)return `Good setup — price just didn't move far enough in the reveal window. In live trading this means the trade is still open. Patience is part of the game.`;
+  if(trendOk&&!win)return `Correct trend, stop hit anyway. Check your stop placement — it should be behind real structure (a swing low for longs, swing high for shorts), not at a round number.`;
+  if(win&&rr>=2)return `Excellent! ${rr.toFixed(2)}:1 R:R and correct trend. This is the exact process to repeat: trend → entry → stop at structure → target at 2R+.`;
+  if(win)return `You won! Push your R:R to 2:1 or higher next time. At 2:1 you stay profitable even with a 40% win rate.`;
+  return `Keep studying the EMA relationship. Pink above gold + sloping up = buy opportunities. Pink below gold + sloping down = short opportunities.`;
+}
+
+// ── NEXT TRADE ───────────────────────────────
+function nextTrade(){ document.getElementById('resultOverlay').classList.remove('show'); loadWindow(); }
+
+function loadWindow(){
+  const max=app.candles.length-HISTORY-REVEAL-15; if(max<1)return;
+  app.winStart=Math.floor(Math.random()*max);
+  app.entry=app.stop=app.target=null; app.trend=null; app.revealIdx=0;
+  app.drawings=[]; app.drawFirstPt=null; app.drawPreview=null;
+  sizeCanvas(); setPhase(app.mode==='beginner'?'bq_trend':'trend');
+}
+
+// ════════════════════════════════════════════
+//  TUTORIAL
+// ════════════════════════════════════════════
+const TUT_STEPS = [
+  {
+    title:'Welcome to Your First Trading Lesson 💕',
+    body:`This is a <strong>real candlestick chart</strong> from NQ Nasdaq Futures. Every bar you see is called a <strong>candle</strong>.
+<span class="eg">🟢 <strong>Green candle</strong> = price went UP that period (close was higher than open)<br>🔴 <strong>Red candle</strong> = price went DOWN that period (close was lower than open)<br>The thin lines sticking out (called <strong>wicks</strong>) show the high and low of that period</span>
+Look at the candles on this chart right now. You can see them going up and down. This is real NQ history.`,
+    autoSet:null
+  },
+  {
+    title:'What Are Those Two Lines?',
+    body:`Those two smooth lines are called <strong>EMAs — Exponential Moving Averages</strong>. They show the average price over recent candles.
+<span class="eg"><span class="ema-20">Pink line = EMA 20</span> — average of the last 20 candles. Reacts quickly to price changes.<br><span class="ema-50">Gold line = EMA 50</span> — average of the last 50 candles. Moves more slowly.</span>
+<strong>Why do these matter?</strong> Because they tell you which direction the market has been moving — the trend.`,
+    autoSet:null
+  },
+  {
+    title:'How to Read the Trend',
+    body:`The relationship between the two EMA lines tells you everything about the trend:
+<span class="eg"><strong>📈 Uptrend (Bullish):</strong> Pink EMA 20 is <em>above</em> the Gold EMA 50. Both are sloping upward.<br>→ Market has been rising. You want to BUY.<br><br><strong>📉 Downtrend (Bearish):</strong> Pink EMA 20 is <em>below</em> the Gold EMA 50. Both are sloping downward.<br>→ Market has been falling. You want to SELL SHORT.<br><br><strong>↔️ Sideways:</strong> Lines are crossing, flat, or tangled.<br>→ No clear direction. Stay out and wait.</span>
+Look at this chart right now — which one do you see?`,
+    autoSet:null
+  },
+  {
+    title:'What is an Entry?',
+    body:`Your <strong>entry price</strong> is where you start your trade — where you buy or sell.
+<span class="eg">For an <strong>uptrend</strong>: the best entry is when price has pulled back (dipped down) and is touching or near the EMA 20 line. This gives you a good price before it goes back up.<br><br>For a <strong>downtrend</strong>: the best entry is when price has bounced up to touch EMA 20 from below. Then you sell short before it falls again.</span>
+The dashed "NOW →" line on the chart shows the current moment. Your entry would be around that price level.`,
+    autoSet:'entry'
+  },
+  {
+    title:'What is a Stop Loss?',
+    body:`A <strong>stop loss</strong> is the price where you automatically exit if you're wrong — to stop your losses from getting bigger.
+<span class="eg">For a <strong>long (buy) trade</strong>: stop goes <strong>BELOW</strong> your entry — just below the most recent low point you can see (called a swing low).<br><br>For a <strong>short (sell) trade</strong>: stop goes <strong>ABOVE</strong> your entry — just above the most recent high point (swing high).</span>
+<strong>Think of it like this:</strong> if price hits your stop, the market proved you wrong. Exit cleanly, take the small loss, and move on. The stop loss is what protects your account.`,
+    autoSet:'stop'
+  },
+  {
+    title:'What is a Take Profit & R:R Ratio?',
+    body:`Your <strong>take profit</strong> is where you cash out when the trade goes your way. Your <strong>R:R ratio</strong> is how much you're trying to make vs. how much you risk.
+<span class="eg">Example: Stop is 200 points below entry. Target is 400 points above entry.<br>Risk = 200 pts. Reward = 400 pts. R:R = <strong>2:1</strong> ✅<br><br>This means: even if you only win 40% of your trades, you still make money overall because each win is twice as big as each loss.</span>
+<strong>Rule: always aim for at least 2:1 R:R before entering any trade.</strong>`,
+    autoSet:'target'
+  },
+  {
+    title:'Putting It All Together',
+    body:`Here\'s the setup we just built on this chart. Notice the three levels:
+<span class="eg"><strong style="color:#E91E8C">Pink line = ENTRY</strong> — where we get in<br><strong style="color:#EF5350">Red line = STOP LOSS</strong> — where we exit if wrong<br><strong style="color:#26A69A">Green line = TAKE PROFIT</strong> — where we cash out</span>
+Now click <strong>"See What Happened →"</strong> to watch the candles reveal and see if this trade would have worked out!`,
+    autoSet:'confirm'
+  },
+  {
+    title:'Ready to Practice! 🎉',
+    body:`That's the full process. Every single trade follows this pattern:<br><br>
+<strong>1.</strong> Identify the trend (EMAs)<br>
+<strong>2.</strong> Find an entry near EMA 20<br>
+<strong>3.</strong> Set stop loss behind structure<br>
+<strong>4.</strong> Set target at 2× your risk<br>
+<strong>5.</strong> Execute and let it play out<br><br>
+Start with <strong>Beginner Mode</strong> — just practice identifying the trend direction. Once you can do that consistently, move to Intermediate and practice placing the full trade.`,
+    autoSet:null
+  },
+];
+
+let tutStep=0, tutCandles=null, tutWinStart=0, tutEntry=null, tutStop=null, tutTarget=null;
+
+function openTutorial(){
+  tutStep=0; tutEntry=null; tutStop=null; tutTarget=null;
+  document.getElementById('tutOverlay').classList.add('show');
+  buildTutDots();
+  const overlay=document.getElementById('tutOverlay');
+  if(!app.candles.length){
+    loadTutData().then(()=>{ renderTutStep(); sizeTutCanvas(); drawTutChart(); });
+  } else {
+    tutCandles=app.candles;
+    pickTutWindow();
+    sizeTutCanvas(); drawTutChart(); renderTutStep();
+  }
+}
+
+async function loadTutData(){
+  const instr=document.getElementById('instrSelect').value;
+  const tf=document.getElementById('tfSelect').value;
+  document.getElementById('tutBody').innerHTML='<div style="display:flex;gap:12px;align-items:center;"><div class="spinner"></div><span>Loading chart data…</span></div>';
+  try { tutCandles=await fetchCandles(instr,tf); pickTutWindow(); } catch(e){ document.getElementById('tutBody').textContent='Could not load data. Close tutorial and try again.'; }
+}
+
+function pickTutWindow(){
+  // Find a clear uptrend window for the tutorial
+  const max=tutCandles.length-HISTORY-REVEAL-15;
+  let best=Math.floor(max*0.4); // default to middle area
+  // Try to find a window where EMA20 > EMA50 (uptrend)
+  for(let start=50;start<max-50;start+=10){
+    const closes=tutCandles.slice(start,start+HISTORY).map(c=>c.c);
+    const e20=calcEMA(closes,20), e50=calcEMA(closes,50);
+    const l20=e20[e20.length-1], l50=e50[e50.length-1];
+    if(l20&&l50&&l20>l50*1.003){best=start;break;}
+  }
+  tutWinStart=best;
+  // Pre-calculate levels
+  const idx=tutWinStart+HISTORY;
+  const isLong=true; // tutorial uses uptrend
+  tutEntry=+tutCandles[idx].c.toFixed(2);
+  tutStop=detectSwingLow(tutCandles,idx,15);
+  tutTarget=+(tutEntry+Math.abs(tutEntry-tutStop)*2).toFixed(2);
+}
+
+function sizeTutCanvas(){
+  const area=document.getElementById('tutChartArea'), canvas=document.getElementById('tutCanvas');
+  canvas.width=area.clientWidth; canvas.height=area.clientHeight;
+}
+
+function drawTutChart(visExtra=0){
+  if(!tutCandles)return;
+  const oldWinStart=app.winStart, oldCandles=app.candles;
+  const oldEntry=app.entry, oldStop=app.stop, oldTarget=app.target;
+  // Temporarily swap state for drawing
+  app.winStart=tutWinStart; app.candles=tutCandles;
+  app.entry = tutStep>=3?tutEntry:null;
+  app.stop  = tutStep>=4?tutStop:null;
+  app.target= tutStep>=5?tutTarget:null;
+  drawChart(HISTORY+1+visExtra,'tutCanvas');
+  app.winStart=oldWinStart; app.candles=oldCandles;
+  app.entry=oldEntry; app.stop=oldStop; app.target=oldTarget;
+}
+
+function buildTutDots(){
+  document.getElementById('tutDots').innerHTML=TUT_STEPS.map((_,i)=>`<div class="tut-dot${i<tutStep?' done':i===tutStep?' active':''}"></div>`).join('');
+}
+
+function renderTutStep(){
+  const s=TUT_STEPS[tutStep];
+  if(!s)return;
+  document.getElementById('tutTitle').textContent=s.title;
+  document.getElementById('tutBody').innerHTML=s.body;
+  document.getElementById('tutCounter').textContent=`${tutStep+1} of ${TUT_STEPS.length}`;
+  document.getElementById('tutPrevBtn').disabled=tutStep===0;
+  const isLast=tutStep===TUT_STEPS.length-1;
+  const nextBtn=document.getElementById('tutNextBtn');
+  if(s.autoSet==='confirm'){
+    nextBtn.textContent='▶ See What Happened!';
+    nextBtn.onclick=()=>tutReveal();
+  } else if(isLast){
+    nextBtn.textContent='✨ Start Beginner Mode!';
+    nextBtn.onclick=()=>{ closeTutorial(); selectMode('beginner'); startTraining(); };
+  } else {
+    nextBtn.textContent='Next →';
+    nextBtn.onclick=()=>tutNav(1);
+  }
+  buildTutDots();
+  sizeTutCanvas(); drawTutChart();
+}
+
+function tutNav(dir){
+  tutStep=Math.max(0,Math.min(TUT_STEPS.length-1,tutStep+dir));
+  renderTutStep();
+}
+
+let tutRevealIdx=0, tutRevealTimer=null;
+function tutReveal(){
+  if(tutRevealTimer)clearInterval(tutRevealTimer);
+  tutRevealIdx=0;
+  const nextBtn=document.getElementById('tutNextBtn');
+  nextBtn.disabled=true;
+  tutRevealTimer=setInterval(()=>{
+    tutRevealIdx++;
+    drawTutChart(tutRevealIdx);
+    if(tutRevealIdx>=30){
+      clearInterval(tutRevealTimer);
+      nextBtn.disabled=false; nextBtn.textContent='Next →'; nextBtn.onclick=()=>tutNav(1);
+      tutStep++;
+      document.getElementById('tutTitle').textContent='Amazing — See How It Played Out?';
+      document.getElementById('tutBody').innerHTML=`Look at what happened after the NOW line! <strong>The candles continued upward</strong> and hit the target.<br><br>This is exactly what you\'re training to spot: a trending market, a clean pullback entry, and a 2:1 reward setup.<br><br>Every session in Barbie Trades will show you a different real chart moment. Your job is to read it before the candles reveal. Over time, your eye just knows. 💕`;
+      buildTutDots();
+    }
+  },80);
+}
+
+function closeTutorial(){
+  if(tutRevealTimer)clearInterval(tutRevealTimer);
+  document.getElementById('tutOverlay').classList.remove('show');
+  // Copy tutorial candles to app if not already loaded
+  if(!app.candles.length&&tutCandles){app.candles=tutCandles;}
+}
+
+// ── MODE SELECT ──────────────────────────────
+function selectMode(m){
+  app.mode=m;
+  ['beginner','intermediate','advanced'].forEach(id=>document.getElementById(`mc-${id}`)?.classList.remove('selected'));
+  document.getElementById(`mc-${m}`)?.classList.add('selected');
+}
+
+// ── NAVIGATION ───────────────────────────────
+function showScreen(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+
+function goHome(){ if(app.revealTimer)clearInterval(app.revealTimer); document.getElementById('resultOverlay').classList.remove('show'); updateWelcomeStats(); showScreen('welcome'); }
+
+function goStats(){ document.getElementById('resultOverlay').classList.remove('show'); renderStats(); showScreen('stats'); }
+
+function updateWelcomeStats(){
+  const s=loadStats(), trades=s.trades||[], wins=trades.filter(t=>t.win).length;
+  document.getElementById('wTotalTrades').textContent=trades.length;
+  document.getElementById('wWinRate').textContent=trades.length?`${Math.round(wins/trades.length*100)}%`:'—';
+  const rrs=trades.filter(t=>t.win).map(t=>t.rr);
+  document.getElementById('wAvgRR').textContent=rrs.length?(rrs.reduce((a,b)=>a+b,0)/rrs.length).toFixed(1):'—';
+  document.getElementById('wStreak').textContent=s.streak||0;
+}
+
+function renderStats(){
+  const s=loadStats(), trades=s.trades||[];
+  const wins=trades.filter(t=>t.win).length, losses=trades.length-wins;
+  const wr=trades.length?Math.round(wins/trades.length*100):0;
+  const rrs=trades.filter(t=>t.win).map(t=>t.rr);
+  const avgRR=rrs.length?(rrs.reduce((a,b)=>a+b,0)/rrs.length).toFixed(2):'—';
+  document.getElementById('bigStats').innerHTML=`
+    <div class="bsc"><div class="bv">${trades.length}</div><div class="bl">Total Trades</div></div>
+    <div class="bsc"><div class="bv">${wr}%</div><div class="bl">Win Rate</div></div>
+    <div class="bsc"><div class="bv">${avgRR}</div><div class="bl">Avg R:R</div></div>
+    <div class="bsc"><div class="bv">${s.streak||0} 🔥</div><div class="bl">Streak</div></div>
+    <div class="bsc"><div class="bv">${wins}</div><div class="bl">Wins</div></div>
+    <div class="bsc"><div class="bv">${losses}</div><div class="bl">Losses</div></div>`;
+  document.getElementById('tradesList').innerHTML=trades.length
+    ?trades.slice(0,25).map(t=>`
+      <div class="trade-row">
+        <div class="t-outcome">${t.win?'✅':'❌'}</div>
+        <div class="t-info"><div class="t-inst">${t.inst||'NQ=F'} <span style="font-weight:400;font-size:11px;color:#AD1457">[${t.mode||'—'}]</span></div><div class="t-date">${t.date||''}</div></div>
+        <div class="t-rr ${t.win?'win':'loss'}">${t.win?'+'+t.rr+'R':'−1R'}</div>
+      </div>`).join('')
+    :'<div style="text-align:center;color:#AD1457;padding:24px;">No trades yet — start training! 💕</div>';
+}
+
+// ── START TRAINING ───────────────────────────
+async function startTraining(){
+  const instr=document.getElementById('instrSelect').value;
+  const tf=document.getElementById('tfSelect').value;
+  app.instrument=instr; app.tf=tf;
+  app.sWins=app.sLosses=app.sStreak=0;
+  ['sWins','sLosses','sStreak'].forEach(id=>document.getElementById(id).textContent='0');
+  document.getElementById('hdrBadge').textContent=instr.replace('=F','');
+  const modeLabels={beginner:'🌸 Beginner',intermediate:'💪 Intermediate',advanced:'⚡ Advanced'};
+  document.getElementById('hdrMode').textContent=modeLabels[app.mode]||app.mode;
+  showScreen('training');
+  document.getElementById('iIcon').textContent='🌸';
+  document.getElementById('iTitle').textContent='Loading real market data…';
+  document.getElementById('iDesc').innerHTML='Fetching candles from Yahoo Finance 💕';
+  document.getElementById('actionRow').innerHTML='<div class="spinner"></div>';
+  document.getElementById('stepDots').innerHTML='';
+  // Wait one frame so fixed layout reflows before sizing canvas
+  await new Promise(r=>requestAnimationFrame(r));
+  sizeCanvas();
+  const canvas=document.getElementById('chartCanvas'), ctx=canvas.getContext('2d');
+  ctx.fillStyle='#FFF8FC'; ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle='#F48FB1'; ctx.font='bold 14px Nunito,sans-serif'; ctx.textAlign='center';
+  ctx.fillText('Loading real market data… 💕',canvas.width/2,canvas.height/2);
+
+  // Use already-loaded tutorial data if available
+  if(tutCandles&&tutCandles.length>=HISTORY+REVEAL+20){
+    app.candles=tutCandles;
+    loadWindow(); return;
+  }
+
+  try{ app.candles=await fetchCandles(instr,tf); loadWindow(); }
+  catch(e){
+    document.getElementById('iIcon').textContent='😢';
+    document.getElementById('iTitle').textContent='Could not load data';
+    document.getElementById('iDesc').innerHTML=e.message;
+    document.getElementById('actionRow').innerHTML=`<button class="btn btn-primary" onclick="startTraining()">🔄 Try Again</button><button class="btn btn-secondary" onclick="goHome()">← Home</button>`;
+  }
+}
+
+window.addEventListener('resize',()=>{
+  if(['trend','entry','stop','target','confirm','bq_trend','bq_buy','bq_revealing','revealing','result'].includes(app.phase)){
+    sizeCanvas(); drawChart(HISTORY+1+app.revealIdx);
+  }
+  if(document.getElementById('tutOverlay').classList.contains('show')){ sizeTutCanvas(); drawTutChart(); }
+});
+
+// ── INIT ─────────────────────────────────────
+updateWelcomeStats();
+</script>
+</body>
+</html>
