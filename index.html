@@ -78,7 +78,7 @@ body {
 
 /* ── CHART ── */
 .chart-wrap { flex: 1; min-height: 0; position: relative; background: white; overflow: hidden; }
-#chartCanvas { display: block; }
+#chartCanvas { display: block; touch-action: none; user-select: none; cursor: grab; }
 #priceTooltip { position: absolute; background: rgba(233,30,140,.85); color: white; padding: 3px 9px; border-radius: 8px; font-size: 12px; font-weight: 800; pointer-events: none; display: none; z-index: 10; }
 
 /* ── DRAWING TOOLBAR ── */
@@ -930,7 +930,8 @@ function begReveal(decision){
 function showBegResult(decision,actualTrend,hit){
   const trendCorrect=(app.trend==='bullish'&&actualTrend==='up')||(app.trend==='bearish'&&actualTrend==='down')||(app.trend==='sideways'&&actualTrend==='flat');
   const dirCorrect=(decision==='long'&&actualTrend==='up')||(decision==='short'&&actualTrend==='down')||(decision==='stay'&&actualTrend==='flat');
-  const win = decision==='stay'?trendCorrect:(hit?.win??false);
+  // Beginner win = correct direction call (not requiring full 2:1 R:R target in 30 candles)
+  const win = dirCorrect;
   if(win){app.sWins++;app.sStreak++;}else{app.sLosses++;app.sStreak=0;}
   document.getElementById('sWins').textContent=app.sWins;
   document.getElementById('sLosses').textContent=app.sLosses;
