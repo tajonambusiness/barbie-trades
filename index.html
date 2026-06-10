@@ -219,6 +219,10 @@ select { font-family: 'Nunito',sans-serif; font-size: 13px; font-weight: 700; ba
 /* ── CANDLE GUIDE OVERLAY ── */
 #candleGuide { display:none; position:fixed; inset:0; z-index:400; background:rgba(233,30,140,.12); backdrop-filter:blur(4px); align-items:center; justify-content:center; padding:16px; overflow-y:auto; }
 #candleGuide.show { display:flex; }
+#sdLesson { display:none; position:fixed; inset:0; z-index:400; background:rgba(38,166,154,.12); backdrop-filter:blur(4px); align-items:center; justify-content:center; padding:16px; overflow-y:auto; }
+#sdLesson.show { display:flex; }
+#psychLesson { display:none; position:fixed; inset:0; z-index:400; background:rgba(156,39,176,.12); backdrop-filter:blur(4px); align-items:center; justify-content:center; padding:16px; overflow-y:auto; }
+#psychLesson.show { display:flex; }
 .cg-card { background:white; border-radius:24px; max-width:680px; width:100%; padding:28px; box-shadow:0 24px 80px rgba(233,30,140,.22); max-height:90vh; overflow-y:auto; }
 .cg-title { font-family:'Pacifico',cursive; font-size:22px; color:var(--hp); margin-bottom:6px; }
 .cg-sub { font-size:13px; color:#AD1457; margin-bottom:20px; }
@@ -290,6 +294,8 @@ select { font-family: 'Nunito',sans-serif; font-size: 13px; font-weight: 700; ba
     <button class="btn btn-primary" onclick="startTraining()">✨ Start Training Session</button>
     <button class="btn btn-secondary" onclick="openTutorial()">📖 Watch Tutorial First</button>
     <button class="btn btn-secondary" onclick="openCandleGuide()">🕯️ Candle Patterns Guide</button>
+    <button class="btn btn-secondary" onclick="openSDLesson()">📦 Supply &amp; Demand</button>
+    <button class="btn btn-secondary" onclick="openPsychLesson()">🧠 Market Psychology</button>
     <button class="btn btn-secondary" onclick="goStats()">📊 My Stats</button>
   </div>
 
@@ -1010,6 +1016,10 @@ function toggleStructure(){ app.showStructure=!app.showStructure; document.getEl
 function toggleZones(){ app.showZones=!app.showZones; document.getElementById('dtZones').classList.toggle('active',app.showZones); drawChart(HISTORY+1+app.revealIdx); }
 function openCandleGuide(){ document.getElementById('candleGuide').classList.add('show'); }
 function closeCandleGuide(){ document.getElementById('candleGuide').classList.remove('show'); }
+function openSDLesson(){ document.getElementById('sdLesson').classList.add('show'); }
+function closeSDLesson(){ document.getElementById('sdLesson').classList.remove('show'); }
+function openPsychLesson(){ document.getElementById('psychLesson').classList.add('show'); }
+function closePsychLesson(){ document.getElementById('psychLesson').classList.remove('show'); }
 
 // ── CANDLE PATTERN DETECTION ─────────────────
 function getCandlePattern(candles,i){
@@ -1818,5 +1828,201 @@ updateWelcomeStats();
     </div>
   </div>
 </div>
+
+<!-- ── SUPPLY & DEMAND LESSON ── -->
+<div id="sdLesson">
+  <div class="cg-card">
+    <h2 style="font-family:'Pacifico',cursive;color:#E91E8C;text-align:center;margin-bottom:6px;">Supply &amp; Demand Zones</h2>
+    <p style="text-align:center;color:#AD1457;font-size:13px;margin-bottom:20px;">Where big money loads up — and why price keeps coming back</p>
+
+    <div class="cg-section">What is a Demand Zone? (Buy Zone)</div>
+    <p class="cg-rule">A <strong>Demand Zone</strong> is a price area where <strong style="color:#26A69A">BUYERS</strong> stepped in so hard that price shot UP fast. Think of it like a sale at the store — at that price, everyone wanted to buy.<br><br>The key: when price comes BACK to that same level, those buyers (and new ones) often step in again. Price bounces UP.</p>
+
+    <svg viewBox="0 0 360 120" style="width:100%;margin:12px 0;border-radius:10px;background:#F8FFF8;">
+      <!-- Demand zone diagram -->
+      <rect x="10" y="60" width="100" height="50" fill="rgba(38,166,154,.15)" stroke="rgba(38,166,154,.5)" stroke-width="1" stroke-dasharray="4,3"/>
+      <text x="60" y="95" fill="#00796B" font-size="9" font-weight="bold" text-anchor="middle">DEMAND ZONE</text>
+      <!-- Base candles -->
+      <rect x="20" y="70" width="8" height="20" fill="#EF5350"/><line x1="24" y1="68" x2="24" y2="92" stroke="#EF5350" stroke-width="1.5"/>
+      <rect x="34" y="72" width="8" height="16" fill="#26A69A"/><line x1="38" y1="70" x2="38" y2="90" stroke="#26A69A" stroke-width="1.5"/>
+      <rect x="48" y="69" width="8" height="18" fill="#EF5350"/><line x1="52" y1="67" x2="52" y2="89" stroke="#EF5350" stroke-width="1.5"/>
+      <rect x="62" y="71" width="8" height="17" fill="#26A69A"/><line x1="66" y1="69" x2="66" y2="90" stroke="#26A69A" stroke-width="1.5"/>
+      <!-- Big launch candle -->
+      <rect x="76" y="30" width="12" height="45" fill="#26A69A"/><line x1="82" y1="26" x2="82" y2="78" stroke="#26A69A" stroke-width="2"/>
+      <text x="82" y="22" fill="#00796B" font-size="8" text-anchor="middle">BIG UP!</text>
+      <!-- Return to zone -->
+      <rect x="110" y="40" width="8" height="30" fill="#EF5350"/>
+      <rect x="122" y="50" width="8" height="20" fill="#EF5350"/>
+      <rect x="134" y="60" width="8" height="15" fill="#EF5350"/>
+      <rect x="146" y="63" width="8" height="10" fill="#26A69A"/>
+      <text x="148" y="58" fill="#AD1457" font-size="8" text-anchor="middle">returns...</text>
+      <!-- Bounce -->
+      <rect x="158" y="30" width="10" height="38" fill="#26A69A"/><line x1="163" y1="25" x2="163" y2="72" stroke="#26A69A" stroke-width="2"/>
+      <rect x="172" y="20" width="10" height="30" fill="#26A69A"/>
+      <rect x="186" y="10" width="10" height="25" fill="#26A69A"/>
+      <text x="175" y="8" fill="#00796B" font-size="9" font-weight="bold" text-anchor="middle">BOUNCE! ✓</text>
+      <!-- Arrow showing bounce -->
+      <path d="M163 72 L163 82 L205 82" fill="none" stroke="rgba(38,166,154,.4)" stroke-width="1" stroke-dasharray="3,3"/>
+    </svg>
+
+    <div class="cg-section">What is a Supply Zone? (Sell Zone)</div>
+    <p class="cg-rule">A <strong>Supply Zone</strong> is a price area where <strong style="color:#EF5350">SELLERS</strong> stepped in so hard that price dropped fast. At that price level, sellers were ready and waiting.<br><br>When price comes BACK to that zone, those sellers often show up again. Price drops DOWN.</p>
+
+    <svg viewBox="0 0 360 120" style="width:100%;margin:12px 0;border-radius:10px;background:#FFF8F8;">
+      <!-- Supply zone -->
+      <rect x="10" y="10" width="100" height="45" fill="rgba(239,83,80,.12)" stroke="rgba(239,83,80,.4)" stroke-width="1" stroke-dasharray="4,3"/>
+      <text x="60" y="28" fill="#B71C1C" font-size="9" font-weight="bold" text-anchor="middle">SUPPLY ZONE</text>
+      <!-- Base candles at top -->
+      <rect x="20" y="20" width="8" height="16" fill="#26A69A"/><line x1="24" y1="18" x2="24" y2="38" stroke="#26A69A" stroke-width="1.5"/>
+      <rect x="34" y="22" width="8" height="14" fill="#EF5350"/><line x1="38" y1="20" x2="38" y2="38" stroke="#EF5350" stroke-width="1.5"/>
+      <rect x="48" y="19" width="8" height="17" fill="#26A69A"/>
+      <rect x="62" y="21" width="8" height="15" fill="#EF5350"/>
+      <!-- Big drop -->
+      <rect x="76" y="37" width="12" height="50" fill="#EF5350"/><line x1="82" y1="33" x2="82" y2="90" stroke="#EF5350" stroke-width="2"/>
+      <text x="82" y="100" fill="#B71C1C" font-size="8" text-anchor="middle">BIG DROP!</text>
+      <!-- Candles rising back to zone -->
+      <rect x="110" y="75" width="8" height="20" fill="#26A69A"/>
+      <rect x="122" y="62" width="8" height="18" fill="#26A69A"/>
+      <rect x="134" y="50" width="8" height="16" fill="#26A69A"/>
+      <rect x="146" y="38" width="8" height="14" fill="#26A69A"/>
+      <text x="145" y="32" fill="#AD1457" font-size="8" text-anchor="middle">returns...</text>
+      <!-- Rejection drop -->
+      <rect x="158" y="42" width="10" height="50" fill="#EF5350"/><line x1="163" y1="36" x2="163" y2="96" stroke="#EF5350" stroke-width="2"/>
+      <rect x="172" y="55" width="10" height="40" fill="#EF5350"/>
+      <rect x="186" y="68" width="10" height="35" fill="#EF5350"/>
+      <text x="175" y="108" fill="#B71C1C" font-size="9" font-weight="bold" text-anchor="middle">REJECTED! ✓</text>
+    </svg>
+
+    <div class="cg-section">Why Do Zones Work?</div>
+    <p class="cg-rule">Big institutions (banks, hedge funds) trade HUGE amounts. They can't fill a $500 million order all at once — price would move too much. So they split it up. When price returns to that level, they fill the rest of their order.<br><br>That's why zones work. <strong>It's not magic — it's math and unfinished business.</strong></p>
+
+    <div class="cg-section">How to Spot Them on a Chart</div>
+    <div style="background:#FFF0F8;border-radius:12px;padding:14px;margin:8px 0;">
+      <p style="font-size:13px;line-height:1.8;color:#880E4F;">
+        <strong>Step 1:</strong> Find a <strong>strong, fast move</strong> up or down (a big candle or series of candles in one direction)<br>
+        <strong>Step 2:</strong> Look at where that move <strong>started from</strong> — that starting area is the zone<br>
+        <strong>Step 3:</strong> The zone is usually 2-5 candles of consolidation (sideways movement) right before the big move<br>
+        <strong>Step 4:</strong> When price <strong>returns</strong> to that area — watch for a reaction
+      </p>
+    </div>
+
+    <div class="cg-section">The Golden Rules</div>
+    <div style="display:grid;gap:8px;margin:8px 0;">
+      <div style="background:linear-gradient(135deg,#E8F5E9,#F1F8E9);border-radius:10px;padding:12px;border-left:4px solid #26A69A;">
+        <strong style="color:#00695C;">✅ BUY at Demand Zones</strong> — when price is in an UPTREND and pulls back to a demand zone. Buyers are likely to step in again.
+      </div>
+      <div style="background:linear-gradient(135deg,#FFEBEE,#FCE4EC);border-radius:10px;padding:12px;border-left:4px solid #EF5350;">
+        <strong style="color:#B71C1C;">✅ SELL at Supply Zones</strong> — when price is in a DOWNTREND and bounces up to a supply zone. Sellers are likely to step in again.
+      </div>
+      <div style="background:linear-gradient(135deg,#FFF3E0,#FFF8E1);border-radius:10px;padding:12px;border-left:4px solid #F9A825;">
+        <strong style="color:#E65100;">⚠️ Fresh zones are stronger</strong> — a zone that hasn't been touched since it formed is more powerful than one that's been tested multiple times.
+      </div>
+      <div style="background:linear-gradient(135deg,#F3E5F5,#EDE7F6);border-radius:10px;padding:12px;border-left:4px solid #9C27B0;">
+        <strong style="color:#6A1B9A;">⚠️ Broken zone = flipped zone</strong> — if price breaks through a supply zone, that supply zone often becomes a demand zone. The roles flip.
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:20px;">
+      <button class="btn btn-primary" onclick="closeSDLesson()">Got it — Show Me on the Chart! 💕</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MARKET PSYCHOLOGY LESSON ── -->
+<div id="psychLesson">
+  <div class="cg-card">
+    <h2 style="font-family:'Pacifico',cursive;color:#E91E8C;text-align:center;margin-bottom:6px;">Market Psychology</h2>
+    <p style="text-align:center;color:#AD1457;font-size:13px;margin-bottom:20px;">Why price moves the way it does — and how emotions drive everything</p>
+
+    <div class="cg-section">The Trader Emotion Cycle</div>
+    <p class="cg-rule" style="margin-bottom:10px;">Every single trader goes through this cycle. Knowing it helps you avoid the traps.</p>
+
+    <div style="background:linear-gradient(135deg,#FFF0F8,#F3E5F5);border-radius:14px;padding:16px;margin:8px 0;">
+      <div style="display:grid;gap:8px;">
+        <div style="display:flex;align-items:center;gap:10px;padding:8px;background:white;border-radius:8px;border-left:4px solid #26A69A;">
+          <span style="font-size:20px;">😊</span><div><strong style="color:#00695C;">Hope / Excitement</strong><br><span style="font-size:12px;color:#555">You enter the trade. It looks perfect. "This is going up for sure!"</span></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px;background:white;border-radius:8px;border-left:4px solid #F9A825;">
+          <span style="font-size:20px;">🤑</span><div><strong style="color:#E65100;">Greed</strong><br><span style="font-size:12px;color:#555">You're in profit. "I'll hold a little longer and make even more…"</span></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px;background:white;border-radius:8px;border-left:4px solid #FF9800;">
+          <span style="font-size:20px;">😬</span><div><strong style="color:#E65100;">Anxiety</strong><br><span style="font-size:12px;color:#555">Price starts pulling back. "Should I exit? Maybe it'll recover…"</span></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px;background:white;border-radius:8px;border-left:4px solid #EF5350;">
+          <span style="font-size:20px;">😨</span><div><strong style="color:#B71C1C;">Fear</strong><br><span style="font-size:12px;color:#555">You're now at break-even or a small loss. "It'll come back… right?"</span></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px;background:white;border-radius:8px;border-left:4px solid #B71C1C;">
+          <span style="font-size:20px;">😱</span><div><strong style="color:#880E4F;">Panic</strong><br><span style="font-size:12px;color:#555">Big loss. You exit at the worst possible time — right before it would have reversed.</span></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px;background:white;border-radius:8px;border-left:4px solid #9C27B0;">
+          <span style="font-size:20px;">🤦</span><div><strong style="color:#6A1B9A;">Regret</strong><br><span style="font-size:12px;color:#555">"I should have held." OR "Why didn't I take profit earlier?" The cycle repeats.</span></div>
+        </div>
+      </div>
+    </div>
+    <p class="cg-rule" style="margin-top:8px;"><strong>The fix:</strong> Set your stop loss and take profit BEFORE entering. Then let the trade play out. Remove emotion from the equation — that's what rules are for.</p>
+
+    <div class="cg-section">Why Does the Market "Know" Your Stop?</div>
+    <p class="cg-rule">It doesn't. But here's the truth:<br><br>
+    Everyone puts their stop loss in the SAME logical places — just below a swing low or just above a swing high. Big institutions know this.<br><br>
+    Before they can fill a massive buy order, they need <strong>sellers</strong> (people panic-selling). So they push price DOWN to where all those stops are, trigger them all at once (everyone panic-sells = lots of sellers), then buy everything up and reverse the market.<br><br>
+    <strong>This is called a Stop Hunt or Liquidity Grab.</strong> After the stop hunt, the real move begins.</p>
+
+    <svg viewBox="0 0 360 130" style="width:100%;margin:12px 0;border-radius:10px;background:#FAFAFA;">
+      <!-- Price levels -->
+      <line x1="10" y1="60" x2="350" y2="60" stroke="#E0E0E0" stroke-width="1" stroke-dasharray="4,3"/>
+      <text x="355" y="63" fill="#999" font-size="8">swing low</text>
+      <line x1="10" y1="40" x2="350" y2="40" stroke="#FCE4EC" stroke-width="1" stroke-dasharray="4,3"/>
+      <text x="15" y="35" fill="#EF5350" font-size="8">stops sitting here</text>
+      <!-- Candles approaching -->
+      <rect x="20" y="45" width="10" height="20" fill="#26A69A"/>
+      <rect x="34" y="48" width="10" height="18" fill="#26A69A"/>
+      <rect x="48" y="50" width="10" height="16" fill="#26A69A"/>
+      <!-- Stop hunt spike down -->
+      <rect x="64" y="55" width="10" height="30" fill="#EF5350"/><line x1="69" y1="40" x2="69" y2="90" stroke="#EF5350" stroke-width="2"/>
+      <text x="69" y="100" fill="#B71C1C" font-size="8" text-anchor="middle" font-weight="bold">STOP HUNT!</text>
+      <text x="69" y="110" fill="#B71C1C" font-size="7" text-anchor="middle">stops triggered</text>
+      <!-- Reversal -->
+      <rect x="78" y="42" width="12" height="48" fill="#26A69A"/><line x1="84" y1="35" x2="84" y2="92" stroke="#26A69A" stroke-width="2"/>
+      <rect x="94" y="30" width="10" height="30" fill="#26A69A"/>
+      <rect x="108" y="18" width="10" height="25" fill="#26A69A"/>
+      <rect x="122" y="8" width="10" height="22" fill="#26A69A"/>
+      <text x="115" y="5" fill="#00695C" font-size="9" font-weight="bold">REAL MOVE UP →</text>
+      <!-- Arrow -->
+      <path d="M69 88 Q100 95 84 92" fill="none" stroke="rgba(38,166,154,.5)" stroke-width="1.5" marker-end="url(#arr)"/>
+    </svg>
+
+    <div class="cg-section">FOMO — Why Trends Go Further Than You Think</div>
+    <p class="cg-rule"><strong>FOMO = Fear Of Missing Out.</strong><br><br>
+    When a market starts moving up strongly, people who didn't enter start thinking "I'm missing this move!" They jump in late, at higher prices. This keeps pushing the price up — further than it "should" go logically.<br><br>
+    That's why you'll see an uptrend keep going for days or weeks even when it seems "too high." FOMO is fuel.<br><br>
+    <strong>The lesson:</strong> Don't chase. Wait for a pullback to a demand zone. Let FOMO traders push the price, then buy when it dips back to value.</p>
+
+    <div class="cg-section">Smart Money vs Retail Traders</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0;">
+      <div style="background:#FFEBEE;border-radius:10px;padding:12px;text-align:center;">
+        <div style="font-size:24px;">🙋</div>
+        <strong style="color:#B71C1C;font-size:13px;">Retail Traders</strong>
+        <p style="font-size:11px;color:#555;margin-top:6px;line-height:1.6;">Buy when excited (high)<br>Sell when panicking (low)<br>Trade with emotions<br>Follow the news</p>
+      </div>
+      <div style="background:#E8F5E9;border-radius:10px;padding:12px;text-align:center;">
+        <div style="font-size:24px;">🏦</div>
+        <strong style="color:#00695C;font-size:13px;">Smart Money</strong>
+        <p style="font-size:11px;color:#555;margin-top:6px;line-height:1.6;">Buy when everyone sells (low)<br>Sell when everyone buys (high)<br>Trade with a plan<br>Create the news</p>
+      </div>
+    </div>
+    <p class="cg-rule" style="margin-top:10px;"><strong>Your goal:</strong> Stop trading like retail. Start thinking like smart money. Buy at demand zones (where smart money accumulates). Sell at supply zones (where smart money distributes). Use structure and EMAs to know when the trend is with you.</p>
+
+    <div class="cg-section">The One Rule That Changes Everything</div>
+    <div style="background:linear-gradient(135deg,#E91E8C,#9C27B0);border-radius:14px;padding:16px;text-align:center;">
+      <p style="color:white;font-size:15px;font-weight:800;line-height:1.7;">"The market is a device for transferring money from the impatient to the patient."<br><span style="font-size:12px;opacity:.9;">— Warren Buffett</span></p>
+    </div>
+    <p class="cg-rule" style="margin-top:10px;">Wait for your setup. Don't force trades. The best trades look obvious — trend is clear, price is at a key level, candle confirms entry. If you have to talk yourself into a trade, skip it.</p>
+
+    <div style="text-align:center;margin-top:20px;">
+      <button class="btn btn-primary" onclick="closePsychLesson()">Got it — I'm Trading Smarter! 💕</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
