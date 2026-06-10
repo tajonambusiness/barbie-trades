@@ -82,7 +82,10 @@ body {
 #priceTooltip { position: absolute; background: rgba(233,30,140,.85); color: white; padding: 3px 9px; border-radius: 8px; font-size: 12px; font-weight: 800; pointer-events: none; display: none; z-index: 10; }
 
 /* ── DRAWING TOOLBAR ── */
-#drawToolbar { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); display: flex; gap: 4px; align-items: center; background: rgba(255,255,255,.95); border: 1.5px solid var(--border); border-radius: 14px; padding: 5px 10px; z-index: 20; box-shadow: 0 4px 16px rgba(233,30,140,.12); flex-wrap: wrap; justify-content: center; }
+#drawToolbarWrap { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); z-index: 20; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+#drawToolbar { display: flex; gap: 4px; align-items: center; background: rgba(255,255,255,.95); border: 1.5px solid var(--border); border-radius: 14px; padding: 5px 10px; box-shadow: 0 4px 16px rgba(233,30,140,.12); flex-wrap: wrap; justify-content: center; transition: all .2s; }
+#drawToolbar.hidden { display: none; }
+#dtToggle { font-size: 11px; font-weight: 800; background: rgba(255,255,255,.92); border: 1.5px solid var(--border); border-radius: 20px; padding: 3px 12px; cursor: pointer; color: #AD1457; box-shadow: 0 2px 8px rgba(233,30,140,.15); white-space: nowrap; }
 .dt-btn { font-family: 'Nunito',sans-serif; font-size: 12px; font-weight: 800; border: 1.5px solid var(--border); border-radius: 8px; padding: 4px 10px; cursor: pointer; background: white; color: var(--text); transition: all .15s; white-space: nowrap; }
 .dt-btn:hover { background: var(--lp); }
 .dt-btn.active { background: var(--hp); color: white; border-color: var(--hp); }
@@ -309,23 +312,26 @@ select { font-family: 'Nunito',sans-serif; font-size: 13px; font-weight: 700; ba
   <div class="chart-wrap" id="chartWrap">
     <canvas id="chartCanvas"></canvas>
     <div id="priceTooltip"></div>
-    <div id="drawToolbar">
-      <span class="dt-label">Draw:</span>
-      <button class="dt-btn" id="dtHLine" onclick="setDrawTool('hline')">― H-Line</button>
-      <button class="dt-btn" id="dtTLine" onclick="setDrawTool('tline')">↗ Trend Line</button>
-      <div class="dt-sep"></div>
-      <span class="dt-label">Color:</span>
-      <div class="dt-swatch active" id="sw0" style="background:#E91E8C" onclick="setDrawColor('#E91E8C',0)"></div>
-      <div class="dt-swatch"        id="sw1" style="background:#F9A825" onclick="setDrawColor('#F9A825',1)"></div>
-      <div class="dt-swatch"        id="sw2" style="background:#26A69A" onclick="setDrawColor('#26A69A',2)"></div>
-      <div class="dt-swatch"        id="sw3" style="background:#EF5350" onclick="setDrawColor('#EF5350',3)"></div>
-      <div class="dt-swatch"        id="sw4" style="background:#9C27B0" onclick="setDrawColor('#9C27B0',4)"></div>
-      <div class="dt-sep"></div>
-      <button class="dt-btn" onclick="undoDrawing()">↩ Undo</button>
-      <button class="dt-btn" onclick="clearDrawings()">🗑 Clear</button>
-      <div class="dt-sep"></div>
-      <button class="dt-btn" id="dtStructure" onclick="toggleStructure()">📐 Structure</button>
-      <button class="dt-btn" id="dtZones" onclick="toggleZones()">🔲 Zones</button>
+    <div id="drawToolbarWrap">
+      <button id="dtToggle" onclick="toggleDrawToolbar()">✏️ Tools ▾</button>
+      <div id="drawToolbar" class="hidden">
+        <span class="dt-label">Draw:</span>
+        <button class="dt-btn" id="dtHLine" onclick="setDrawTool('hline')">― H-Line</button>
+        <button class="dt-btn" id="dtTLine" onclick="setDrawTool('tline')">↗ Trend Line</button>
+        <div class="dt-sep"></div>
+        <span class="dt-label">Color:</span>
+        <div class="dt-swatch active" id="sw0" style="background:#E91E8C" onclick="setDrawColor('#E91E8C',0)"></div>
+        <div class="dt-swatch"        id="sw1" style="background:#F9A825" onclick="setDrawColor('#F9A825',1)"></div>
+        <div class="dt-swatch"        id="sw2" style="background:#26A69A" onclick="setDrawColor('#26A69A',2)"></div>
+        <div class="dt-swatch"        id="sw3" style="background:#EF5350" onclick="setDrawColor('#EF5350',3)"></div>
+        <div class="dt-swatch"        id="sw4" style="background:#9C27B0" onclick="setDrawColor('#9C27B0',4)"></div>
+        <div class="dt-sep"></div>
+        <button class="dt-btn" onclick="undoDrawing()">↩ Undo</button>
+        <button class="dt-btn" onclick="clearDrawings()">🗑 Clear</button>
+        <div class="dt-sep"></div>
+        <button class="dt-btn" id="dtStructure" onclick="toggleStructure()">📐 Structure</button>
+        <button class="dt-btn" id="dtZones" onclick="toggleZones()">🔲 Zones</button>
+      </div>
     </div>
     <div id="candleTip"><div class="ct-name" id="ctName"></div><div class="ct-sig" id="ctSig"></div></div>
   </div>
@@ -994,6 +1000,12 @@ function drawGuidedOverlay(ctx,slice,effStart,ema20,ema50,minP,maxP,W,H,candleW)
   }
 }
 
+function toggleDrawToolbar(){
+  const tb=document.getElementById('drawToolbar');
+  const btn=document.getElementById('dtToggle');
+  const hidden=tb.classList.toggle('hidden');
+  btn.textContent=hidden?'✏️ Tools ▾':'✏️ Tools ▴';
+}
 function toggleStructure(){ app.showStructure=!app.showStructure; document.getElementById('dtStructure').classList.toggle('active',app.showStructure); drawChart(HISTORY+1+app.revealIdx); }
 function toggleZones(){ app.showZones=!app.showZones; document.getElementById('dtZones').classList.toggle('active',app.showZones); drawChart(HISTORY+1+app.revealIdx); }
 function openCandleGuide(){ document.getElementById('candleGuide').classList.add('show'); }
