@@ -258,6 +258,12 @@ select { font-family: 'Nunito',sans-serif; font-size: 13px; font-weight: 700; ba
       <h3>Beginner</h3>
       <p>Just identify which way the market is moving. 2 simple questions. Build your eye first.</p>
     </div>
+    <div class="mode-card" id="mc-guided" onclick="selectMode('guided')">
+      <div class="mc-icon">🎓</div>
+      <div class="mc-badge" style="background:#7C3AED;color:white">New!</div>
+      <h3>Guided</h3>
+      <p>The app walks you through reading the chart step by step — teaches you what to look for.</p>
+    </div>
     <div class="mode-card" id="mc-intermediate" onclick="selectMode('intermediate')">
       <div class="mc-icon">💪</div>
       <div class="mc-badge yellow">Level Up</div>
@@ -396,8 +402,9 @@ const app = {
   revealIdx:0, revealTimer:null,
   sWins:0, sLosses:0, sStreak:0,
   drawings:[], drawTool:null, drawColor:'#E91E8C', drawFirstPt:null, drawPreview:null,
-  viewShift:0, viewZoom:1,
+  viewShift:0, viewZoom:1, viewOffsetY:0,
   showStructure:false, showZones:false,
+  gwAnswers:{},
 };
 
 // ── ROUNDRECT POLYFILL ───────────────────────
@@ -515,7 +522,10 @@ function drawChart(visCount, canvasId='chartCanvas'){
   const off = effStart - ctxStart;
   const ema20 = ema20full.slice(off), ema50 = ema50full.slice(off);
 
-  const {minP,maxP}=getPriceRange(slice,[app.entry,app.stop,app.target]);
+  const {minP:rawMin,maxP:rawMax}=getPriceRange(slice,[app.entry,app.stop,app.target]);
+  const vOff=app.viewOffsetY||0;
+  const minP=rawMin+vOff, maxP=rawMax+vOff;
+  app._pricePerPx=(rawMax-rawMin)/Math.max(1,H-PAD.top-PAD.bottom);
   const candleW=Math.max((W-PAD.left-PAD.right)/slice.length,2);
   const bodyW=Math.max(candleW*0.65,1.5);
 
@@ -596,9 +606,14 @@ function drawChart(visCount, canvasId='chartCanvas'){
   ctx.fillStyle='#F9A825'; ctx.fillText('─ EMA 50',PAD.left+68,16);
 
   // Pan hint when shifted
-  if(app.viewShift||app.viewZoom!==1){
+  if(app.viewShift||app.viewZoom!==1||app.viewOffsetY){
     ctx.fillStyle='rgba(233,30,140,.5)'; ctx.font='bold 10px Nunito,sans-serif'; ctx.textAlign='right';
-    ctx.fillText('↔ drag to pan · scroll to zoom · dbl-click reset',W-PAD.right-4,H-PAD.bottom+13);
+    ctx.fillText('drag any direction to pan · scroll to zoom · dbl-click reset',W-PAD.right-4,H-PAD.bottom+13);
+  }
+
+  // Guided walkthrough overlay
+  if(['gw_ema','gw_slope','gw_structure','gw_conclusion'].includes(app.phase)){
+    drawGuidedOverlay(ctx,slice,effStart,ema20,ema50,minP,maxP,W,H,candleW);
   }
 
   // Time labels
@@ -756,27 +771,30 @@ document.getElementById('chartCanvas').addEventListener('mouseleave',()=>{
 // ── PAN + ZOOM ───────────────────────────────
 (()=>{
   const cv=document.getElementById('chartCanvas');
-  let drag=false, dragX=0, dragShift=0;
+  let drag=false, dragX=0, dragY=0, dragShift=0, dragOffY=0;
 
   function redraw(){ drawChart(HISTORY+1+app.revealIdx); }
   function isActive(){ return app.candles.length>0 && !['welcome','result'].includes(app.phase); }
 
-  // Mouse drag to pan
+  // Mouse drag to pan (horizontal + vertical)
   cv.addEventListener('mousedown',e=>{
     if(app.drawTool||['entry','stop','target'].includes(app.phase))return;
     if(!isActive())return;
-    drag=true; dragX=e.clientX; dragShift=app.viewShift;
+    drag=true; dragX=e.clientX; dragY=e.clientY;
+    dragShift=app.viewShift; dragOffY=app.viewOffsetY||0;
     cv.style.cursor='grabbing';
   });
   window.addEventListener('mousemove',e=>{
     if(!drag)return;
     const canvas=document.getElementById('chartCanvas');
-    const candleW=(canvas.width-60-40)/Math.max(1,Math.round((HISTORY+1+app.revealIdx)/(app.viewZoom||1)));
+    const candleW=(canvas.width-PAD.left-PAD.right)/Math.max(1,Math.round((HISTORY+1+app.revealIdx)/(app.viewZoom||1)));
     const delta=Math.round((dragX-e.clientX)/Math.max(candleW,1));
     app.viewShift=Math.max(-(HISTORY+1+app.revealIdx-5), Math.min(app.winStart, dragShift+delta));
+    const dyPx=e.clientY-dragY;
+    app.viewOffsetY=dragOffY - dyPx*(app._pricePerPx||1);
     redraw();
   });
-  window.addEventListener('mouseup',()=>{ if(drag){drag=false; cv.style.cursor='default';} });
+  window.addEventListener('mouseup',()=>{ if(drag){drag=false; cv.style.cursor='grab';} });
 
   // Scroll to zoom
   cv.addEventListener('wheel',e=>{
@@ -790,16 +808,16 @@ document.getElementById('chartCanvas').addEventListener('mouseleave',()=>{
   // Double-click to reset view
   cv.addEventListener('dblclick',e=>{
     if(app.drawTool)return;
-    app.viewShift=0; app.viewZoom=1; redraw();
+    app.viewShift=0; app.viewZoom=1; app.viewOffsetY=0; redraw();
   });
 
-  // Touch: single finger drag = pan, two fingers = pinch zoom
-  let t1=null, t2=null, touchShift=0, pinchDist0=0, pinchZoom0=1;
+  // Touch: single finger drag = pan H+V, two fingers = pinch zoom
+  let t1=null, t2=null, touchShift=0, touchOffY=0, pinchDist0=0, pinchZoom0=1;
   cv.addEventListener('touchstart',e=>{
     if(!isActive())return;
     if(e.touches.length===1){
       if(app.drawTool)return;
-      t1=e.touches[0]; touchShift=app.viewShift; t2=null;
+      t1=e.touches[0]; touchShift=app.viewShift; touchOffY=app.viewOffsetY||0; t2=null;
     } else if(e.touches.length===2){
       t1=null;
       t2=e.touches;
@@ -812,9 +830,11 @@ document.getElementById('chartCanvas').addEventListener('mouseleave',()=>{
     e.preventDefault();
     if(e.touches.length===1&&t1&&!app.drawTool){
       const canvas=document.getElementById('chartCanvas');
-      const candleW=(canvas.width-60-40)/Math.max(1,Math.round((HISTORY+1+app.revealIdx)/(app.viewZoom||1)));
-      const delta=Math.round((t1.clientX-e.touches[0].clientX)/Math.max(candleW,1));
-      app.viewShift=Math.max(-(HISTORY+1+app.revealIdx-5), Math.min(app.winStart, touchShift+delta));
+      const candleW=(canvas.width-PAD.left-PAD.right)/Math.max(1,Math.round((HISTORY+1+app.revealIdx)/(app.viewZoom||1)));
+      const dxPan=Math.round((t1.clientX-e.touches[0].clientX)/Math.max(candleW,1));
+      app.viewShift=Math.max(-(HISTORY+1+app.revealIdx-5), Math.min(app.winStart, touchShift+dxPan));
+      const dyPx=e.touches[0].clientY-t1.clientY;
+      app.viewOffsetY=touchOffY - dyPx*(app._pricePerPx||1);
       redraw();
     } else if(e.touches.length===2&&t2){
       const dx=e.touches[0].clientX-e.touches[1].clientX, dy=e.touches[0].clientY-e.touches[1].clientY;
@@ -836,6 +856,100 @@ function setDrawTool(t){
 function setDrawColor(c,idx){ app.drawColor=c; document.querySelectorAll('.dt-swatch').forEach((s,i)=>s.classList.toggle('active',i===idx)); }
 function undoDrawing(){ app.drawFirstPt=null; app.drawPreview=null; if(app.drawings.length)app.drawings.pop(); drawChart(HISTORY+1+app.revealIdx); }
 function clearDrawings(){ app.drawings=[]; app.drawFirstPt=null; app.drawPreview=null; drawChart(HISTORY+1+app.revealIdx); }
+// ── GUIDED MODE FUNCTIONS ────────────────────
+function computeChartState(){
+  if(!app.candles.length)return null;
+  const slice=app.candles.slice(app.winStart,app.winStart+HISTORY+1);
+  if(slice.length<52)return null;
+  const allC=slice.map(c=>c.c);
+  const ema20=calcEMA(allC,20), ema50=calcEMA(allC,50);
+  const ni=slice.length-1;
+  const e20=ema20[ni], e50=ema50[ni];
+  if(!e20||!e50)return null;
+  const lb=Math.min(8,ni);
+  const e20p=ema20[ni-lb]||e20, e50p=ema50[ni-lb]||e50;
+  const emaAbove=e20>e50?'pink':'gold';
+  const e20sl=e20-e20p, e50sl=e50-e50p;
+  const slope=e20sl>0&&e50sl>0?'up':e20sl<0&&e50sl<0?'down':'mixed';
+  const recent=slice.slice(Math.max(0,ni-4));
+  const greens=recent.filter(c=>c.c>=c.o).length;
+  const candleColor=greens>recent.length/2?'green':greens<recent.length/2?'red':'mixed';
+  let trend='sideways';
+  if(emaAbove==='pink'&&slope!=='down')trend='up';
+  else if(emaAbove==='gold'&&slope!=='up')trend='down';
+  return{emaAbove,slope,candleColor,trend,e20,e50};
+}
+
+function gwAnswer(step,answer){
+  app.gwAnswers=app.gwAnswers||{};
+  app.gwAnswers[step]=answer;
+  if(step==='ema')setPhase('gw_slope');
+  else if(step==='slope')setPhase('gw_structure');
+  else if(step==='structure')setPhase('gw_conclusion');
+}
+
+function gwFinish(trend){
+  app.trend=trend; app.entry=app.stop=app.target=null;
+  setPhase('bq_buy');
+}
+
+function drawGuidedOverlay(ctx,slice,effStart,ema20,ema50,minP,maxP,W,H,candleW){
+  const phase=app.phase;
+  const nowAbsIdx=app.winStart+HISTORY;
+  const nowI=nowAbsIdx-effStart;
+  if(nowI<0||nowI>=slice.length)return;
+  const nowX=PAD.left+nowI*candleW+candleW/2;
+
+  // Steps 1 & 2: label the EMA lines at NOW
+  if(phase==='gw_ema'||phase==='gw_slope'){
+    const e20y=ema20[nowI]!=null?p2y(ema20[nowI],minP,maxP,H):null;
+    const e50y=ema50[nowI]!=null?p2y(ema50[nowI],minP,maxP,H):null;
+    const drawLabel=(text,color,y,above)=>{
+      if(y==null)return;
+      const lw=ctx.measureText(text).width+16, lh=20, lx=Math.max(PAD.left+2,nowX-lw-10), ly=above?y-lh-4:y+4;
+      ctx.fillStyle=color; ctx.beginPath(); ctx.roundRect(lx,ly,lw,lh,6); ctx.fill();
+      ctx.fillStyle='white'; ctx.font='bold 10px Nunito,sans-serif'; ctx.textAlign='center';
+      ctx.fillText(text,lx+lw/2,ly+13);
+    };
+    if(e20y!=null&&e50y!=null){
+      drawLabel('🌸 EMA 20 (PINK)','#E91E8C',e20y,e20y<e50y);
+      drawLabel('🌟 EMA 50 (GOLD)','#F9A825',e50y,e50y<e20y);
+    }
+  }
+
+  // Step 2: add direction arrows on EMAs
+  if(phase==='gw_slope'){
+    const lb=Math.min(15,nowI);
+    const drawArrow=(vals,color)=>{
+      if(!vals[nowI]||!vals[nowI-lb])return;
+      const x1=PAD.left+(nowI-lb)*candleW+candleW/2, y1=p2y(vals[nowI-lb],minP,maxP,H);
+      const x2=nowX, y2=p2y(vals[nowI],minP,maxP,H);
+      ctx.strokeStyle=color; ctx.lineWidth=3; ctx.setLineDash([]);
+      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+      // Arrowhead
+      const ang=Math.atan2(y2-y1,x2-x1);
+      ctx.fillStyle=color; ctx.beginPath();
+      ctx.moveTo(x2,y2);
+      ctx.lineTo(x2-10*Math.cos(ang-0.4),y2-10*Math.sin(ang-0.4));
+      ctx.lineTo(x2-10*Math.cos(ang+0.4),y2-10*Math.sin(ang+0.4));
+      ctx.closePath(); ctx.fill();
+    };
+    drawArrow(ema20,'rgba(233,30,140,0.7)');
+    drawArrow(ema50,'rgba(249,168,37,0.7)');
+  }
+
+  // Steps 3 & 4: highlight last 5 candles box
+  if(phase==='gw_structure'||phase==='gw_conclusion'){
+    const si=Math.max(0,nowI-4);
+    const bx=PAD.left+si*candleW, bw=(nowI-si+1)*candleW;
+    ctx.fillStyle='rgba(233,30,140,0.06)'; ctx.fillRect(bx,PAD.top,bw,H-PAD.top-PAD.bottom);
+    ctx.strokeStyle='rgba(233,30,140,0.5)'; ctx.lineWidth=2; ctx.setLineDash([4,3]);
+    ctx.strokeRect(bx,PAD.top,bw,H-PAD.top-PAD.bottom); ctx.setLineDash([]);
+    ctx.fillStyle='rgba(233,30,140,0.7)'; ctx.font='bold 9px Nunito,sans-serif'; ctx.textAlign='center';
+    ctx.fillText('READ THESE',bx+bw/2,PAD.top+10);
+  }
+}
+
 function toggleStructure(){ app.showStructure=!app.showStructure; document.getElementById('dtStructure').classList.toggle('active',app.showStructure); drawChart(HISTORY+1+app.revealIdx); }
 function toggleZones(){ app.showZones=!app.showZones; document.getElementById('dtZones').classList.toggle('active',app.showZones); drawChart(HISTORY+1+app.revealIdx); }
 function openCandleGuide(){ document.getElementById('candleGuide').classList.add('show'); }
@@ -996,6 +1110,64 @@ const BEG = {
     }
   },
   bq_revealing:{ dots:2, step:2, icon:'👀', title:'Watching what happens next…', desc(){return 'The candles are revealing one by one. Watch where the market goes after the NOW line.';}, actions(){return '';} },
+
+  // ── GUIDED MODE PHASES ──────────────────────
+  gw_ema:{
+    dots:4, step:1, icon:'👁️', title:'Step 1 — Which line is higher right now?',
+    desc(){
+      return `Look at the chart near the <strong>NOW →</strong> line. You see two colored lines:<br><br>
+🌸 <strong style="color:#E91E8C">PINK line</strong> = EMA 20 (fast average)<br>
+🌟 <strong style="color:#F9A825">GOLD line</strong> = EMA 50 (slow average)<br><br>
+On the <em>right side</em> of the chart — which line is sitting <strong>higher up</strong>?`;
+    },
+    actions(){ return `
+      <button class="btn btn-up" onclick="gwAnswer('ema','pink')">🌸 Pink is higher</button>
+      <button class="btn btn-dn" onclick="gwAnswer('ema','gold')">🌟 Gold is higher</button>`; }
+  },
+  gw_slope:{
+    dots:4, step:2, icon:'📐', title:'Step 2 — Which way are the lines pointing?',
+    desc(){
+      return `Now trace both lines from left to right with your eyes.<br><br>
+Are they going <strong>upward like a ramp</strong>, <strong>downward like a slide</strong>, or <strong>sideways / tangled</strong>?`;
+    },
+    actions(){ return `
+      <button class="btn btn-up" onclick="gwAnswer('slope','up')">↗️ Both going UP</button>
+      <button class="btn btn-dn" onclick="gwAnswer('slope','down')">↘️ Both going DOWN</button>
+      <button class="btn btn-neu" onclick="gwAnswer('slope','mixed')">↔️ Mixed or Flat</button>`; }
+  },
+  gw_structure:{
+    dots:4, step:3, icon:'🕯️', title:'Step 3 — What are the candles saying?',
+    desc(){
+      return `Look at the candles highlighted near <strong>NOW →</strong>.<br><br>
+🟢 <strong>Green candle</strong> = price closed HIGHER (buyers won)<br>
+🔴 <strong>Red candle</strong> = price closed LOWER (sellers won)<br><br>
+What do you see <em>mostly</em> in the highlighted zone?`;
+    },
+    actions(){ return `
+      <button class="btn btn-up" onclick="gwAnswer('structure','green')">🟢 Mostly Green</button>
+      <button class="btn btn-dn" onclick="gwAnswer('structure','red')">🔴 Mostly Red</button>
+      <button class="btn btn-neu" onclick="gwAnswer('structure','mixed')">⬜ Mixed</button>`; }
+  },
+  gw_conclusion:{
+    dots:4, step:4, icon:'💡', title:"Here's what the chart is showing…",
+    desc(){
+      const s=computeChartState(); if(!s)return 'Could not analyze — try next trade.';
+      const pa=s.emaAbove==='pink';
+      const a=app.gwAnswers||{};
+      const ef=a.ema===s.emaAbove?'✅':'❌', sf=a.slope===s.slope?'✅':'❌', cf=a.structure===s.candleColor?'✅':'❌';
+      const tt=s.trend==='up'?'📈 <strong style="color:#26A69A">UPTREND — market going UP</strong>':s.trend==='down'?'📉 <strong style="color:#EF5350">DOWNTREND — market going DOWN</strong>':'↔️ <strong style="color:#9C27B0">SIDEWAYS — no clear direction</strong>';
+      return `${ef} <strong style="color:#E91E8C">Pink</strong> is ${pa?'<strong>ABOVE</strong>':'<strong>BELOW</strong>'} Gold → ${pa?'bullish signal 📈':'bearish signal 📉'}<br>
+${sf} Lines are pointing <strong>${s.slope==='up'?'↗️ UP':s.slope==='down'?'↘️ DOWN':'↔️ mixed'}</strong><br>
+${cf} Recent candles are mostly <strong>${s.candleColor==='green'?'🟢 green (buyers winning)':s.candleColor==='red'?'🔴 red (sellers winning)':'⬜ mixed'}</strong><br><br>
+Put it together → ${tt}<br><br>
+<em>Now — based on what you just read — what would you do?</em>`;
+    },
+    actions(){
+      const s=computeChartState();
+      const t=s?(s.trend==='up'?'bullish':s.trend==='down'?'bearish':'sideways'):'sideways';
+      return `<button class="btn btn-primary" onclick="gwFinish('${t}')">Got it — I'll make my call! 💪</button>`;
+    }
+  },
 };
 
 // ── INTERMEDIATE / ADVANCED PHASES ───────────
@@ -1236,8 +1408,8 @@ function loadWindow(){
   app.winStart=Math.floor(Math.random()*max);
   app.entry=app.stop=app.target=null; app.trend=null; app.revealIdx=0;
   app.drawings=[]; app.drawFirstPt=null; app.drawPreview=null;
-  app.viewShift=0; app.viewZoom=1;
-  sizeCanvas(); setPhase(app.mode==='beginner'?'bq_trend':'trend');
+  app.viewShift=0; app.viewZoom=1; app.viewOffsetY=0; app.gwAnswers={};
+  sizeCanvas(); setPhase(app.mode==='beginner'?'bq_trend':app.mode==='guided'?'gw_ema':'trend');
 }
 
 // ════════════════════════════════════════════
@@ -1430,7 +1602,7 @@ function closeTutorial(){
 // ── MODE SELECT ──────────────────────────────
 function selectMode(m){
   app.mode=m;
-  ['beginner','intermediate','advanced'].forEach(id=>document.getElementById(`mc-${id}`)?.classList.remove('selected'));
+  ['beginner','guided','intermediate','advanced'].forEach(id=>document.getElementById(`mc-${id}`)?.classList.remove('selected'));
   document.getElementById(`mc-${m}`)?.classList.add('selected');
 }
 
@@ -1481,7 +1653,7 @@ async function startTraining(){
   app.sWins=app.sLosses=app.sStreak=0;
   ['sWins','sLosses','sStreak'].forEach(id=>document.getElementById(id).textContent='0');
   document.getElementById('hdrBadge').textContent=instr.replace('=F','');
-  const modeLabels={beginner:'🌸 Beginner',intermediate:'💪 Intermediate',advanced:'⚡ Advanced'};
+  const modeLabels={beginner:'🌸 Beginner',guided:'🎓 Guided',intermediate:'💪 Intermediate',advanced:'⚡ Advanced'};
   document.getElementById('hdrMode').textContent=modeLabels[app.mode]||app.mode;
   showScreen('training');
   document.getElementById('iIcon').textContent='🌸';
