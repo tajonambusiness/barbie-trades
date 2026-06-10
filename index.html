@@ -440,6 +440,31 @@ function calcEMA(closes,period){
 }
 
 // ── DATA FETCH ───────────────────────────────
+function generateFallbackData(instr){
+  // Deterministic pseudo-random so patterns are consistent
+  const iES=instr==='ES=F';
+  let s=iES?12345:67890;
+  const r=()=>{ s=(s*1664525+1013904223)>>>0; return s/4294967296; };
+  let price=iES?4800:19500;
+  const mult=iES?1:4;
+  const candles=[];
+  let tDir=1, tLen=0;
+  for(let i=520;i>=0;i--){
+    const date=new Date(Date.now()-i*86400000);
+    if(date.getDay()===0||date.getDay()===6)continue;
+    tLen++; if(tLen>10+r()*35){tDir=r()>0.5?1:-1;tLen=0;}
+    const range=(70+r()*180)*mult;
+    const bull=r()+tDir*0.12>0.5;
+    const body=range*(0.25+r()*0.5);
+    const o=price, c=bull?price+body:price-body;
+    const h=Math.max(o,c)+r()*range*0.45, l=Math.min(o,c)-r()*range*0.45;
+    candles.push({t:date,o:+o.toFixed(2),h:+h.toFixed(2),l:+l.toFixed(2),c:+c.toFixed(2),v:Math.floor(r()*800000+200000),demo:true});
+    price+=(bull?1:-1)*body*0.7+tDir*range*0.04;
+    price=Math.max(Math.min(price,iES?5800:24000),iES?3500:13000);
+  }
+  return candles;
+}
+
 async function fetchCandles(instr,tf){
   const range=tf==='1d'?'4y':'60d';
   const yf1=`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(instr)}?interval=${tf}&range=${range}&includePrePost=false`;
@@ -455,11 +480,10 @@ async function fetchCandles(instr,tf){
   ];
   for(const url of urls){
     try{
-      const res=await fetch(url,{signal:AbortSignal.timeout(12000)});
+      const res=await fetch(url,{signal:AbortSignal.timeout(10000)});
       if(!res.ok)continue;
       const text=await res.text();
       let data; try{data=JSON.parse(text);}catch{continue;}
-      // allorigins wraps in {contents:'...'} sometimes
       if(data.contents) try{data=JSON.parse(data.contents);}catch{continue;}
       const r=data?.chart?.result?.[0]; if(!r)continue;
       const ts=r.timestamp, q=r.indicators.quote[0], candles=[];
@@ -471,7 +495,10 @@ async function fetchCandles(instr,tf){
       if(candles.length>=HISTORY+REVEAL+20)return candles;
     }catch(e){}
   }
-  throw new Error('Could not load data. Check internet and try again.');
+  // All live sources failed — use generated practice data so the app always works
+  const fb=generateFallbackData(instr);
+  if(fb.length>=HISTORY+REVEAL+20)return fb;
+  throw new Error('Could not load data.');
 }
 
 // ── CHART HELPERS ────────────────────────────
@@ -1692,7 +1719,19 @@ async function startTraining(){
     loadWindow(); return;
   }
 
-  try{ app.candles=await fetchCandles(instr,tf); loadWindow(); }
+  try{
+    app.candles=await fetchCandles(instr,tf);
+    const isDemo=app.candles[0]?.demo;
+    if(isDemo){
+      document.getElementById('hdrBadge').style.background='#9C27B0';
+      document.getElementById('hdrBadge').title='Live data unavailable — using practice data';
+      document.getElementById('hdrBadge').textContent=instr.replace('=F','')+' ✦';
+    } else {
+      document.getElementById('hdrBadge').style.background='';
+      document.getElementById('hdrBadge').textContent=instr.replace('=F','');
+    }
+    loadWindow();
+  }
   catch(e){
     document.getElementById('iIcon').textContent='😢';
     document.getElementById('iTitle').textContent='Could not load data';
