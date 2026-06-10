@@ -186,6 +186,21 @@ body {
 .lesson-box h4 { font-size: 11px; font-weight: 900; color: var(--hp); text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 6px; }
 .lesson-box p { font-size: 13px; color: var(--text); line-height: 1.65; }
 
+/* ── SIGNAL BREAKDOWN ── */
+.sig-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+.sig-card { border-radius: 12px; padding: 10px 12px; text-align: left; border: 1.5px solid transparent; }
+.sig-card.ok  { background: #E8F5E9; border-color: #A5D6A7; }
+.sig-card.miss{ background: #FFEBEE; border-color: #FFCDD2; }
+.sig-card.warn{ background: #FFF8E1; border-color: #FFE082; }
+.sig-icon { font-size: 16px; display: block; margin-bottom: 2px; }
+.sig-label { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .8px; color: #888; display: block; }
+.sig-val { font-size: 13px; font-weight: 800; display: block; margin-top: 1px; }
+.sig-card.ok .sig-val { color: #2E7D32; }
+.sig-card.miss .sig-val { color: #C62828; }
+.sig-card.warn .sig-val { color: #E65100; }
+.analyze-btn { display: block; width: 100%; text-align: center; background: none; border: 1.5px dashed #E91E8C; color: #E91E8C; font-family: 'Nunito',sans-serif; font-size: 13px; font-weight: 800; border-radius: 10px; padding: 8px; cursor: pointer; margin-bottom: 14px; transition: all .15s; }
+.analyze-btn:hover { background: #FFF0F8; }
+
 /* ── STATS SCREEN ── */
 #stats { padding: 24px 20px; max-width: 720px; margin: 0 auto; gap: 18px; min-height: 100vh; }
 .stats-header { display: flex; align-items: center; gap: 12px; }
@@ -194,6 +209,14 @@ body {
 .bsc { background: white; border-radius: 18px; padding: 18px; box-shadow: 0 4px 20px rgba(233,30,140,.08); border: 2px solid var(--border); text-align: center; }
 .bsc .bv { font-size: 36px; font-weight: 900; color: var(--hp); }
 .bsc .bl { font-size: 11px; font-weight: 800; color: #AD1457; text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+.pattern-card { background: white; border-radius: 18px; padding: 18px 20px; border: 2px solid var(--border); box-shadow: 0 4px 20px rgba(233,30,140,.08); margin-bottom: 16px; }
+.pattern-card h3 { font-size: 14px; font-weight: 900; color: var(--hp); margin-bottom: 12px; }
+.pattern-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.pattern-label { font-size: 12px; font-weight: 700; color: #555; flex: 1; }
+.pattern-bar-wrap { flex: 2; background: #F8E6F0; border-radius: 20px; height: 10px; overflow: hidden; }
+.pattern-bar { height: 100%; border-radius: 20px; transition: width .6s ease; }
+.pattern-pct { font-size: 12px; font-weight: 900; width: 36px; text-align: right; }
+.insight-box { background: linear-gradient(135deg,#FFF0F8,#FCE4EC); border-radius: 12px; padding: 12px 14px; margin-top: 10px; font-size: 13px; color: #880E4F; line-height: 1.6; }
 .trades-list { display: flex; flex-direction: column; gap: 8px; }
 .trade-row { background: white; border-radius: 12px; padding: 12px 16px; display: flex; align-items: center; gap: 12px; border: 1.5px solid var(--border); }
 .trade-row .t-outcome { font-size: 18px; }
@@ -223,6 +246,13 @@ select { font-family: 'Nunito',sans-serif; font-size: 13px; font-weight: 700; ba
 #sdLesson.show { display:flex; }
 #psychLesson { display:none; position:fixed; inset:0; z-index:400; background:rgba(156,39,176,.12); backdrop-filter:blur(4px); align-items:center; justify-content:center; padding:16px; overflow-y:auto; }
 #psychLesson.show { display:flex; }
+#rrLesson { display:none; position:fixed; inset:0; z-index:400; background:rgba(249,168,37,.1); backdrop-filter:blur(4px); align-items:center; justify-content:center; padding:16px; overflow-y:auto; }
+#rrLesson.show { display:flex; }
+.rr-slider-row { display:flex; align-items:center; gap:12px; margin-bottom:14px; }
+.rr-slider-row label { font-size:13px; font-weight:800; color:#AD1457; width:110px; flex-shrink:0; }
+.rr-slider-row input[type=range] { flex:1; accent-color:#E91E8C; }
+.rr-slider-row .rr-val { font-size:14px; font-weight:900; color:#E91E8C; width:50px; text-align:right; }
+.rr-calc-box { background: #FFF8E1; border: 1.5px solid #FFE082; border-radius: 14px; padding: 16px; margin: 12px 0; }
 .cg-card { background:white; border-radius:24px; max-width:680px; width:100%; padding:28px; box-shadow:0 24px 80px rgba(233,30,140,.22); max-height:90vh; overflow-y:auto; }
 .cg-title { font-family:'Pacifico',cursive; font-size:22px; color:var(--hp); margin-bottom:6px; }
 .cg-sub { font-size:13px; color:#AD1457; margin-bottom:20px; }
@@ -296,7 +326,8 @@ select { font-family: 'Nunito',sans-serif; font-size: 13px; font-weight: 700; ba
     <button class="btn btn-secondary" onclick="openCandleGuide()">🕯️ Candle Patterns Guide</button>
     <button class="btn btn-secondary" onclick="openSDLesson()">📦 Supply &amp; Demand</button>
     <button class="btn btn-secondary" onclick="openPsychLesson()">🧠 Market Psychology</button>
-    <button class="btn btn-secondary" onclick="goStats()">📊 My Stats</button>
+    <button class="btn btn-secondary" onclick="openRRLesson()">📐 Win Rate Math</button>
+    <button class="btn btn-secondary" onclick="goStats()">📊 My Journal</button>
   </div>
 
   <div class="how-it-works">
@@ -377,11 +408,12 @@ select { font-family: 'Nunito',sans-serif; font-size: 13px; font-weight: 700; ba
 <!-- ══════════════ STATS ══════════════ -->
 <div id="stats" class="screen">
   <div class="stats-header">
-    <h2>💕 My Progress</h2>
-    <button class="btn btn-secondary btn-sm" onclick="goHome()" style="margin-left:auto;">← Back</button>
+    <h2>💕 My Journal</h2>
+    <button class="btn btn-secondary btn-sm" onclick="goHome()" style="margin-left:auto;">← Home</button>
   </div>
-  <div class="big-stats" id="bigStats"></div>
-  <h3 style="font-size:15px;font-weight:800;color:var(--text);">Recent Trades</h3>
+  <div class="big-stats" id="bigStats" style="margin-bottom:16px;"></div>
+  <div class="pattern-card" id="patternCard"></div>
+  <h3 style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:8px;">Trade History</h3>
   <div class="trades-list" id="tradesList"></div>
 </div>
 
@@ -392,6 +424,11 @@ select { font-family: 'Nunito',sans-serif; font-size: 13px; font-weight: 700; ba
     <div class="result-title" id="rTitle">Winner!</div>
     <div class="result-sub"   id="rSub"></div>
     <div class="result-metrics" id="rMetrics"></div>
+    <div id="rSigSection">
+      <div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:#AD1457;text-align:left;margin-bottom:8px;">📊 What the chart was telling you</div>
+      <div class="sig-grid" id="rSigGrid"></div>
+      <button class="analyze-btn" onclick="analyzeChart()">🔍 Tap to see annotated chart</button>
+    </div>
     <div class="lesson-box"><h4>💡 Lesson</h4><p id="rLesson"></p></div>
     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
       <button class="btn btn-primary" onclick="nextTrade()">✨ Next Trade</button>
@@ -435,9 +472,9 @@ if (!CanvasRenderingContext2D.prototype.roundRect) {
 // ── STATS ────────────────────────────────────
 function loadStats(){ try{return JSON.parse(localStorage.getItem('bt3_stats')||'{"trades":[],"streak":0}');}catch{return{trades:[],streak:0};} }
 function saveStats(s){ localStorage.setItem('bt3_stats',JSON.stringify(s)); }
-function recordTrade(win,rr,inst,date,mode){
+function recordTrade(win,rr,inst,date,mode,trendOk,isLong,signals){
   const s=loadStats();
-  s.trades.unshift({win,rr:parseFloat(rr.toFixed(2)),inst,date,mode,ts:Date.now()});
+  s.trades.unshift({win,rr:parseFloat(rr.toFixed(2)),inst,date,mode,ts:Date.now(),trendOk,isLong,signals});
   if(s.trades.length>200)s.trades=s.trades.slice(0,200);
   s.streak=win?(s.streak||0)+1:0;
   saveStats(s); return s;
@@ -1097,6 +1134,26 @@ function openSDLesson(){ document.getElementById('sdLesson').classList.add('show
 function closeSDLesson(){ document.getElementById('sdLesson').classList.remove('show'); }
 function openPsychLesson(){ document.getElementById('psychLesson').classList.add('show'); }
 function closePsychLesson(){ document.getElementById('psychLesson').classList.remove('show'); }
+function openRRLesson(){ document.getElementById('rrLesson').classList.add('show'); rrCalc(); }
+function closeRRLesson(){ document.getElementById('rrLesson').classList.remove('show'); }
+function rrCalc(){
+  const wr=parseFloat(document.getElementById('rrWR').value)||50;
+  const rr=parseFloat(document.getElementById('rrRR').value)||2;
+  document.getElementById('rrWRVal').textContent=wr+'%';
+  document.getElementById('rrRRVal').textContent=rr.toFixed(1)+':1';
+  const trades=20, wins=Math.round(trades*wr/100), losses=trades-wins;
+  const profit=wins*rr - losses*1;
+  const breakEven=+(1/(1+rr)*100).toFixed(1);
+  const profitable=profit>0;
+  document.getElementById('rrResult').innerHTML=`
+    <div style="font-size:13px;line-height:1.9;color:#555;">
+      Over <strong>20 trades</strong> at ${wr}% win rate with ${rr.toFixed(1)}:1 R:R:<br>
+      ${wins} wins × +${rr.toFixed(1)}R = <strong style="color:#26A69A">+${(wins*rr).toFixed(1)}R</strong><br>
+      ${losses} losses × −1R = <strong style="color:#EF5350">−${losses}R</strong><br>
+      <strong style="font-size:16px;color:${profitable?'#00695C':'#C62828'}">Net: ${profit>0?'+':''}${profit.toFixed(1)}R ${profitable?'✅ Profitable':'❌ Losing'}</strong>
+    </div>
+    <div style="margin-top:10px;font-size:12px;color:#AD1457;">Break-even win rate at ${rr.toFixed(1)}:1 R:R = <strong>${breakEven}%</strong></div>`;
+}
 
 // ── CANDLE PATTERN DETECTION ─────────────────
 function getCandlePattern(candles,i){
@@ -1497,6 +1554,28 @@ function startReveal(){
   },75);
 }
 
+function computeSignals(isLong){
+  const cs=computeChartState();
+  if(!cs)return null;
+  const {emaAbove,slope,candleColor}=cs;
+  const emaOk=isLong?(emaAbove==='pink'&&slope!=='down'):(emaAbove==='gold'&&slope!=='up');
+  const slopeOk=isLong?(slope==='up'):(slope==='down');
+  const candlesOk=isLong?(candleColor==='green'):(candleColor==='red');
+  return{emaOk,slopeOk,candlesOk,emaAbove,slope,candleColor};
+}
+
+function buildSigGrid(signals,isLong,rr){
+  if(!signals)return'';
+  const dir=isLong?'Bullish':'Bearish';
+  const emaVal=signals.emaAbove==='pink'?'Pink > Gold (Bull)':'Gold > Pink (Bear)';
+  const slopeVal=signals.slope==='up'?'Both rising ↑':signals.slope==='down'?'Both falling ↓':'Mixed / Flat';
+  const candleVal=signals.candleColor==='green'?'Mostly green ✓':signals.candleColor==='red'?'Mostly red ✓':'Mixed';
+  const rrOk=rr>=2;
+  const card=(ok,label,val)=>`<div class="sig-card ${ok?'ok':'miss'}"><span class="sig-icon">${ok?'✅':'❌'}</span><span class="sig-label">${label}</span><span class="sig-val">${val}</span></div>`;
+  const rrCard=`<div class="sig-card ${rrOk?'ok':'warn'}"><span class="sig-icon">${rrOk?'✅':'⚠️'}</span><span class="sig-label">R:R Ratio</span><span class="sig-val">${rr.toFixed(2)}:1 ${rrOk?'(Good)':'(Need 2:1+)'}</span></div>`;
+  return card(signals.emaOk,'EMA Alignment',emaVal)+card(signals.slopeOk,'EMA Slope',slopeVal)+card(signals.candlesOk,'Candle Momentum',candleVal)+rrCard;
+}
+
 function showResult(hit,noHit){
   const isLong=app.entry>app.stop;
   const risk=Math.abs(app.entry-app.stop), reward=Math.abs(app.target-app.entry), rr=reward/risk;
@@ -1506,9 +1585,10 @@ function showResult(hit,noHit){
   document.getElementById('sLosses').textContent=app.sLosses;
   document.getElementById('sStreak').textContent=app.sStreak;
   const date=app.candles[app.winStart+HISTORY]?.t.toLocaleDateString()||'';
-  recordTrade(win,parseFloat(rr.toFixed(2)),app.instrument,date,app.mode);
   const actual=detectTrend();
   const trendOk=(app.trend==='bullish'&&actual==='up')||(app.trend==='bearish'&&actual==='down')||(app.trend==='sideways'&&actual==='flat');
+  const signals=computeSignals(isLong);
+  recordTrade(win,parseFloat(rr.toFixed(2)),app.instrument,date,app.mode,trendOk,isLong,signals);
   document.getElementById('rEmoji').textContent=win?'🎉':'💪';
   const rTitle=document.getElementById('rTitle');
   rTitle.textContent=win?'Winner! 💕':'Learning Moment';
@@ -1519,9 +1599,20 @@ function showResult(hit,noHit){
     <div class="rm"><span class="rv">${isLong?'Long':'Short'}</span>Direction</div>
     <div class="rm"><span class="rv">${rr.toFixed(2)}:1</span>R:R Ratio</div>
     <div class="rm"><span class="rv">${win?'✅ Win':'❌ Loss'}</span>Outcome</div>`;
+  document.getElementById('rSigGrid').innerHTML=buildSigGrid(signals,isLong,rr);
   document.getElementById('rLesson').textContent=buildLesson(win,trendOk,isLong,rr,actual,noHit);
   app.phase='result';
   document.getElementById('resultOverlay').classList.add('show');
+}
+
+function analyzeChart(){
+  document.getElementById('resultOverlay').classList.remove('show');
+  app.showStructure=true; app.showZones=true;
+  document.getElementById('dtStructure').classList.add('active');
+  document.getElementById('dtZones').classList.add('active');
+  const tb=document.getElementById('drawToolbar');
+  if(tb.classList.contains('hidden')) toggleDrawToolbar();
+  drawChart(HISTORY+1+app.revealIdx);
 }
 
 function detectTrend(){
@@ -1769,22 +1860,56 @@ function renderStats(){
   const s=loadStats(), trades=s.trades||[];
   const wins=trades.filter(t=>t.win).length, losses=trades.length-wins;
   const wr=trades.length?Math.round(wins/trades.length*100):0;
-  const rrs=trades.filter(t=>t.win).map(t=>t.rr);
-  const avgRR=rrs.length?(rrs.reduce((a,b)=>a+b,0)/rrs.length).toFixed(2):'—';
+  const allRRs=trades.map(t=>t.rr).filter(Boolean);
+  const avgRR=allRRs.length?(allRRs.reduce((a,b)=>a+b,0)/allRRs.length).toFixed(2):'—';
   document.getElementById('bigStats').innerHTML=`
-    <div class="bsc"><div class="bv">${trades.length}</div><div class="bl">Total Trades</div></div>
+    <div class="bsc"><div class="bv">${trades.length}</div><div class="bl">Trades</div></div>
     <div class="bsc"><div class="bv">${wr}%</div><div class="bl">Win Rate</div></div>
     <div class="bsc"><div class="bv">${avgRR}</div><div class="bl">Avg R:R</div></div>
-    <div class="bsc"><div class="bv">${s.streak||0} 🔥</div><div class="bl">Streak</div></div>
-    <div class="bsc"><div class="bv">${wins}</div><div class="bl">Wins</div></div>
-    <div class="bsc"><div class="bv">${losses}</div><div class="bl">Losses</div></div>`;
+    <div class="bsc"><div class="bv">${s.streak||0} 🔥</div><div class="bl">Streak</div></div>`;
+
+  // Pattern analysis
+  const pc=document.getElementById('patternCard');
+  if(trades.length<3){pc.innerHTML='<p style="text-align:center;color:#AD1457;font-size:13px;padding:8px;">Trade at least 3 times to unlock pattern analysis 💕</p>'; }
+  else{
+    const withTrend=trades.filter(t=>t.trendOk!=null&&t.trendOk);
+    const againstTrend=trades.filter(t=>t.trendOk!=null&&!t.trendOk);
+    const wtWR=withTrend.length?Math.round(withTrend.filter(t=>t.win).length/withTrend.length*100):null;
+    const atWR=againstTrend.length?Math.round(againstTrend.filter(t=>t.win).length/againstTrend.length*100):null;
+    const goodRR=trades.filter(t=>t.rr>=2), badRR=trades.filter(t=>t.rr<2&&t.rr>0);
+    const goodRRWR=goodRR.length?Math.round(goodRR.filter(t=>t.win).length/goodRR.length*100):null;
+    const badRRWR=badRR.length?Math.round(badRR.filter(t=>t.win).length/badRR.length*100):null;
+    const bar=(pct,color)=>`<div class="pattern-bar-wrap"><div class="pattern-bar" style="width:${pct}%;background:${color}"></div></div>`;
+    const pctColor=p=>p>=55?'#26A69A':p>=40?'#F9A825':'#EF5350';
+    let rows='';
+    if(wtWR!=null) rows+=`<div class="pattern-row"><span class="pattern-label">✅ Trading WITH trend</span>${bar(wtWR,pctColor(wtWR))}<span class="pattern-pct" style="color:${pctColor(wtWR)}">${wtWR}%</span></div>`;
+    if(atWR!=null) rows+=`<div class="pattern-row"><span class="pattern-label">❌ Trading AGAINST trend</span>${bar(atWR,pctColor(atWR))}<span class="pattern-pct" style="color:${pctColor(atWR)}">${atWR}%</span></div>`;
+    if(goodRRWR!=null) rows+=`<div class="pattern-row"><span class="pattern-label">R:R ≥ 2:1</span>${bar(goodRRWR,pctColor(goodRRWR))}<span class="pattern-pct" style="color:${pctColor(goodRRWR)}">${goodRRWR}%</span></div>`;
+    if(badRRWR!=null) rows+=`<div class="pattern-row"><span class="pattern-label">R:R &lt; 2:1</span>${bar(badRRWR,pctColor(badRRWR))}<span class="pattern-pct" style="color:${pctColor(badRRWR)}">${badRRWR}%</span></div>`;
+    // Compute insight
+    let insight='';
+    if(atWR!=null&&wtWR!=null&&(wtWR-atWR)>15) insight=`🔑 Your win rate jumps ${wtWR-atWR}% when you trade WITH the trend. Make this your #1 rule.`;
+    else if(badRRWR!=null&&goodRRWR!=null&&(goodRRWR-badRRWR)>10) insight=`🔑 You win ${goodRRWR-badRRWR}% more often on trades with 2:1+ R:R. Stretch your targets.`;
+    else if(parseFloat(avgRR)<2&&avgRR!=='—') insight=`🔑 Your average R:R is ${avgRR}. To be profitable long-term you need 2.0+. Move your targets further from entry.`;
+    else if(wr>=55) insight=`🔑 ${wr}% win rate — solid! Keep focusing on your R:R to maximize profits per win.`;
+    else insight=`🔑 Keep trading consistently. Patterns become clear after 10+ trades.`;
+    pc.innerHTML=`<h3>📈 Your Pattern Analysis</h3>${rows}<div class="insight-box">${insight}</div>`;
+  }
+
   document.getElementById('tradesList').innerHTML=trades.length
-    ?trades.slice(0,25).map(t=>`
-      <div class="trade-row">
+    ?trades.slice(0,30).map(t=>{
+      const sigIcons=t.signals?[
+        t.signals.emaOk?'<span title="EMA aligned">✅</span>':'<span title="EMA against">❌</span>',
+        t.signals.candlesOk?'<span title="Candles confirmed">✅</span>':'<span title="Candles against">❌</span>',
+      ].join(''):'';
+      return `<div class="trade-row">
         <div class="t-outcome">${t.win?'✅':'❌'}</div>
-        <div class="t-info"><div class="t-inst">${t.inst||'NQ=F'} <span style="font-weight:400;font-size:11px;color:#AD1457">[${t.mode||'—'}]</span></div><div class="t-date">${t.date||''}</div></div>
+        <div class="t-info">
+          <div class="t-inst">${t.inst||'NQ=F'} <span style="font-weight:600;font-size:11px;color:${t.isLong?'#26A69A':'#EF5350'}">${t.isLong!=null?(t.isLong?'Long':'Short'):''}</span> <span style="font-weight:400;font-size:10px;color:#aaa">${t.mode||''}</span></div>
+          <div class="t-date">${t.date||''} ${sigIcons}</div>
+        </div>
         <div class="t-rr ${t.win?'win':'loss'}">${t.win?'+'+t.rr+'R':'−1R'}</div>
-      </div>`).join('')
+      </div>`;}).join('')
     :'<div style="text-align:center;color:#AD1457;padding:24px;">No trades yet — start training! 💕</div>';
 }
 
@@ -2001,6 +2126,82 @@ updateWelcomeStats();
 
     <div style="text-align:center;margin-top:20px;">
       <button class="btn btn-primary" onclick="closeSDLesson()">Got it — Show Me on the Chart! 💕</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── WIN RATE MATH LESSON ── -->
+<div id="rrLesson">
+  <div class="cg-card">
+    <h2 style="font-family:'Pacifico',cursive;color:#E91E8C;text-align:center;margin-bottom:6px;">Win Rate Math</h2>
+    <p style="text-align:center;color:#AD1457;font-size:13px;margin-bottom:20px;">The one concept that changes how you think about trading forever</p>
+
+    <div class="cg-section">The Question Nobody Asks</div>
+    <p class="cg-rule">Most beginners obsess over being RIGHT. They want to win 70%, 80% of trades. They feel like a failure when they lose.<br><br>But here's the truth that professional traders know: <strong>you can lose more than half your trades and still make money.</strong> The win rate is only half the equation. The other half is <strong>how much you make when you win vs how much you lose when you lose.</strong></p>
+
+    <div class="cg-section">R:R — Risk to Reward Ratio</div>
+    <div style="background:linear-gradient(135deg,#FFF0F8,#F3E5F5);border-radius:14px;padding:16px;margin:8px 0;">
+      <p style="font-size:14px;line-height:1.8;color:#880E4F;">
+        <strong>1R = your risk.</strong> If your stop is 50 points away from your entry, you're risking 1R.<br>
+        <strong>2R = your target.</strong> If your target is 100 points away, that's 2R.<br><br>
+        At <strong>2:1 R:R</strong>, every win pays you twice what a loss costs you.<br>
+        So you only need to be right <strong>34% of the time to break even.</strong><br>
+        At 50% — you're <strong>very profitable.</strong>
+      </p>
+    </div>
+
+    <div class="cg-section">The Break-Even Table</div>
+    <div style="overflow-x:auto;margin:8px 0;">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <tr style="background:#FCE4EC;">
+          <th style="padding:8px 12px;text-align:left;color:#880E4F;border-radius:8px 0 0 0;">R:R Ratio</th>
+          <th style="padding:8px 12px;text-align:center;color:#880E4F;">Break-Even Win Rate</th>
+          <th style="padding:8px 12px;text-align:center;color:#880E4F;border-radius:0 8px 0 0;">At 50% Win Rate</th>
+        </tr>
+        <tr style="background:#FAFAFA;"><td style="padding:8px 12px;font-weight:700;">1:1</td><td style="padding:8px 12px;text-align:center;color:#EF5350;">50%</td><td style="padding:8px 12px;text-align:center;color:#888;">Break even</td></tr>
+        <tr style="background:white;"><td style="padding:8px 12px;font-weight:700;">1.5:1</td><td style="padding:8px 12px;text-align:center;color:#F9A825;">40%</td><td style="padding:8px 12px;text-align:center;color:#26A69A;">+5R profit</td></tr>
+        <tr style="background:#F9FBE7;"><td style="padding:8px 12px;font-weight:700;color:#00695C;">2:1 ← Minimum</td><td style="padding:8px 12px;text-align:center;color:#26A69A;">34%</td><td style="padding:8px 12px;text-align:center;color:#26A69A;font-weight:800;">+10R profit</td></tr>
+        <tr style="background:#E8F5E9;"><td style="padding:8px 12px;font-weight:700;color:#00695C;">3:1</td><td style="padding:8px 12px;text-align:center;color:#26A69A;">25%</td><td style="padding:8px 12px;text-align:center;color:#26A69A;font-weight:800;">+25R profit</td></tr>
+      </table>
+    </div>
+
+    <div class="cg-section">🧮 Try It Yourself</div>
+    <div class="rr-calc-box">
+      <div class="rr-slider-row">
+        <label>Win Rate</label>
+        <input type="range" id="rrWR" min="20" max="80" value="50" oninput="rrCalc()">
+        <span class="rr-val" id="rrWRVal">50%</span>
+      </div>
+      <div class="rr-slider-row">
+        <label>R:R Ratio</label>
+        <input type="range" id="rrRR" min="5" max="40" value="20" oninput="rrCalc()">
+        <span class="rr-val" id="rrRRVal">2.0:1</span>
+      </div>
+      <div id="rrResult"></div>
+    </div>
+
+    <div class="cg-section">What This Means for Your Trading</div>
+    <div style="display:grid;gap:8px;margin:8px 0;">
+      <div style="background:#E8F5E9;border-radius:10px;padding:12px;border-left:4px solid #26A69A;">
+        <strong style="color:#00695C;">✅ Focus on R:R first, not win rate</strong><br>
+        <span style="font-size:12px;color:#555;">Before entering, make sure your target is at least 2× your stop distance. If it's not, skip the trade.</span>
+      </div>
+      <div style="background:#E8F5E9;border-radius:10px;padding:12px;border-left:4px solid #26A69A;">
+        <strong style="color:#00695C;">✅ A 40% win rate with 2.5:1 R:R beats a 60% win rate with 1:1</strong><br>
+        <span style="font-size:12px;color:#555;">Do the math: 40% × 2.5R − 60% × 1R = +0.4R per trade average.</span>
+      </div>
+      <div style="background:#FFEBEE;border-radius:10px;padding:12px;border-left:4px solid #EF5350;">
+        <strong style="color:#C62828;">❌ Never take a trade with less than 1.5:1 R:R</strong><br>
+        <span style="font-size:12px;color:#555;">At 1:1 you need to be right 50%+ just to break even. That's extremely hard consistently.</span>
+      </div>
+      <div style="background:#FFF8E1;border-radius:10px;padding:12px;border-left:4px solid #F9A825;">
+        <strong style="color:#E65100;">⚠️ Don't move your stop to "save" a trade</strong><br>
+        <span style="font-size:12px;color:#555;">Moving your stop widens your risk and destroys your R:R calculation. The math only works if you honor your original stop.</span>
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:20px;">
+      <button class="btn btn-primary" onclick="closeRRLesson()">Got it — I'm Thinking in R:R! 💕</button>
     </div>
   </div>
 </div>
