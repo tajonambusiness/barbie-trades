@@ -335,6 +335,7 @@ select { font-family: 'Nunito',sans-serif; font-size: 13px; font-weight: 700; ba
         <button class="dt-btn" onclick="undoDrawing()">↩ Undo</button>
         <button class="dt-btn" onclick="clearDrawings()">🗑 Clear</button>
         <div class="dt-sep"></div>
+        <button class="dt-btn" id="dtCross" onclick="toggleCross()">✛ Crosshair</button>
         <button class="dt-btn" id="dtStructure" onclick="toggleStructure()">📐 Structure</button>
         <button class="dt-btn" id="dtZones" onclick="toggleZones()">🔲 Zones</button>
       </div>
@@ -415,7 +416,8 @@ const app = {
   sWins:0, sLosses:0, sStreak:0,
   drawings:[], drawTool:null, drawColor:'#E91E8C', drawFirstPt:null, drawPreview:null,
   viewShift:0, viewZoom:1, viewOffsetY:0,
-  showStructure:false, showZones:false,
+  showStructure:false, showZones:false, showCross:false,
+  _crossX:null, _crossY:null,
   gwAnswers:{},
 };
 
@@ -453,25 +455,52 @@ function calcEMA(closes,period){
 
 // ── DATA FETCH ───────────────────────────────
 function generateFallbackData(instr){
-  // Deterministic pseudo-random so patterns are consistent
   const iES=instr==='ES=F';
   let s=iES?12345:67890;
   const r=()=>{ s=(s*1664525+1013904223)>>>0; return s/4294967296; };
+  // Box-Muller normal distribution for realistic returns
+  const rn=()=>{ const u=r()||1e-9,v=r(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); };
   let price=iES?4800:19500;
   const mult=iES?1:4;
+  // NQ daily range ~120-300pts, ES ~20-70pts
+  const baseRange=iES?35:140;
   const candles=[];
-  let tDir=1, tLen=0;
+  let tDir=1, tLen=0, vol=1; // vol = volatility regime multiplier
   for(let i=520;i>=0;i--){
     const date=new Date(Date.now()-i*86400000);
     if(date.getDay()===0||date.getDay()===6)continue;
-    tLen++; if(tLen>10+r()*35){tDir=r()>0.5?1:-1;tLen=0;}
-    const range=(70+r()*180)*mult;
-    const bull=r()+tDir*0.12>0.5;
-    const body=range*(0.25+r()*0.5);
-    const o=price, c=bull?price+body:price-body;
-    const h=Math.max(o,c)+r()*range*0.45, l=Math.min(o,c)-r()*range*0.45;
-    candles.push({t:date,o:+o.toFixed(2),h:+h.toFixed(2),l:+l.toFixed(2),c:+c.toFixed(2),v:Math.floor(r()*800000+200000),demo:true});
-    price+=(bull?1:-1)*body*0.7+tDir*range*0.04;
+    // Trend changes: realistic 2-8 week trends
+    tLen++;
+    if(tLen>10+r()*30){ tDir=r()>0.45?1:-1; tLen=0; }
+    // Volatility clustering: quiet stretches and volatile bursts
+    if(r()<0.06) vol=0.5+r()*0.7;         // sudden quiet
+    if(r()<0.04) vol=1.4+r()*1.2;         // volatility spike
+    vol=vol*0.96+0.04*(0.9+r()*0.2);      // mean-revert vol toward 1
+    const dayVol=baseRange*vol;
+    // Open gaps: futures have small overnight gaps ~30% of the time
+    const gapPct=r()<0.3?(rn()*0.002*mult):0;
+    const o=+(price*(1+gapPct)).toFixed(2);
+    // Body: small doji-ish candles are common (~40% of days)
+    const isDoji=r()<0.38;
+    const bodyFrac=isDoji?(r()*0.12):(0.25+r()*0.55);
+    const bull=r()+tDir*0.1>0.5;
+    const body=dayVol*bodyFrac;
+    const c=+(bull?o+body:o-body).toFixed(2);
+    // Realistic wicks: upper/lower wicks roughly 20-50% of range each
+    const hi=Math.max(o,c), lo=Math.min(o,c);
+    const upperWick=dayVol*(0.08+r()*0.42);
+    const lowerWick=dayVol*(0.08+r()*0.42);
+    // Rejection candles: occasionally long wick one side (pin bar)
+    const isPinUp=r()<0.07, isPinDown=r()<0.07;
+    const h=+(hi+(isPinUp?dayVol*(0.6+r()*0.4):upperWick)).toFixed(2);
+    const l=+(lo-(isPinDown?dayVol*(0.6+r()*0.4):lowerWick)).toFixed(2);
+    // Volume: higher on big-range days
+    const rangeNorm=(h-l)/dayVol;
+    const vol_k=Math.floor((0.6+rangeNorm*0.8)*mult*(iES?60000:200000)+r()*mult*(iES?40000:150000));
+    candles.push({t:date,o,h,l,c,v:vol_k,demo:true});
+    // Next open near this close (drift)
+    const drift=tDir*dayVol*0.03;
+    price=c+drift;
     price=Math.max(Math.min(price,iES?5800:24000),iES?3500:13000);
   }
   return candles;
@@ -676,6 +705,41 @@ function drawChart(visCount, canvasId='chartCanvas'){
     const lbl=app.tf==='1d'?c.t.toLocaleDateString('en-US',{month:'short',day:'numeric'}):c.t.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
     ctx.fillText(lbl,x,H-6);
   }
+
+  // ── CROSSHAIR OVERLAY ────────────────────────
+  if(app.showCross && app._crossX!=null && app._crossY!=null){
+    const rect=canvas.getBoundingClientRect();
+    const cx=app._crossX*(W/rect.width);
+    const cy=app._crossY*(H/rect.height);
+    if(cx>=PAD.left&&cx<=W-PAD.right&&cy>=PAD.top&&cy<=H-PAD.bottom){
+      ctx.strokeStyle='rgba(80,80,80,0.45)'; ctx.lineWidth=1; ctx.setLineDash([5,4]);
+      // vertical line
+      ctx.beginPath(); ctx.moveTo(cx,PAD.top); ctx.lineTo(cx,H-PAD.bottom); ctx.stroke();
+      // horizontal line
+      ctx.beginPath(); ctx.moveTo(PAD.left,cy); ctx.lineTo(W-PAD.right,cy); ctx.stroke();
+      ctx.setLineDash([]);
+      // price badge on right axis
+      const crossPrice=maxP-((cy-PAD.top)/(H-PAD.top-PAD.bottom))*(maxP-minP);
+      const priceStr=crossPrice.toFixed(0);
+      ctx.font='bold 10px Nunito,sans-serif';
+      const tw=ctx.measureText(priceStr).width;
+      ctx.fillStyle='rgba(50,50,50,0.85)';
+      ctx.beginPath(); ctx.roundRect(W-PAD.right+1,cy-9,tw+10,18,4); ctx.fill();
+      ctx.fillStyle='white'; ctx.textAlign='left';
+      ctx.fillText(priceStr,W-PAD.right+5,cy+4);
+      // candle date badge at bottom
+      const ci=Math.round((cx-PAD.left)/candleW);
+      if(ci>=0&&ci<slice.length){
+        const cDate=slice[ci];
+        const dLbl=app.tf==='1d'?cDate.t.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'2-digit'}):cDate.t.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+        const dtw=ctx.measureText(dLbl).width;
+        ctx.fillStyle='rgba(50,50,50,0.85)';
+        ctx.beginPath(); ctx.roundRect(cx-dtw/2-5,H-PAD.bottom+1,dtw+10,16,4); ctx.fill();
+        ctx.fillStyle='white'; ctx.textAlign='center';
+        ctx.fillText(dLbl,cx,H-PAD.bottom+12);
+      }
+    }
+  }
 }
 
 function drawHLine(ctx,price,color,label,minP,maxP,W,H){
@@ -745,6 +809,12 @@ function handleChartTap(clientX, clientY){
     }
     drawChart(HISTORY+1+app.revealIdx); return;
   }
+  // Crosshair click: drop an H-Line at that price
+  if(app.showCross){
+    const price=yToPrice(clientY);
+    app.drawings.push({type:'hline',price,color:app.drawColor});
+    drawChart(HISTORY+1+app.revealIdx); return;
+  }
   if(!['entry','stop','target'].includes(app.phase))return;
   const price=yToPrice(clientY);
   if(app.phase==='entry'){app.entry=price;setPhase('stop');}
@@ -785,7 +855,13 @@ document.getElementById('chartCanvas').addEventListener('mousemove',e=>{
     app.drawPreview={x:(e.clientX-rect.left)*(canvas.width/rect.width),y:(e.clientY-rect.top)*(canvas.height/rect.height)};
     drawChart(HISTORY+1+app.revealIdx);
   }
-  const show=app.drawTool||['entry','stop','target'].includes(app.phase);
+  // Crosshair live tracking
+  if(app.showCross){
+    app._crossX=e.clientX-rect.left;
+    app._crossY=e.clientY-rect.top;
+    drawChart(HISTORY+1+app.revealIdx);
+  }
+  const show=app.drawTool||app.showCross||['entry','stop','target'].includes(app.phase);
   if(!show){tt.style.display='none';}else{
     tt.style.display='block'; tt.style.left=(e.clientX-rect.left+14)+'px'; tt.style.top=(e.clientY-rect.top-12)+'px'; tt.textContent=price.toFixed(0);
   }
@@ -1014,6 +1090,7 @@ function toggleDrawToolbar(){
 }
 function toggleStructure(){ app.showStructure=!app.showStructure; document.getElementById('dtStructure').classList.toggle('active',app.showStructure); drawChart(HISTORY+1+app.revealIdx); }
 function toggleZones(){ app.showZones=!app.showZones; document.getElementById('dtZones').classList.toggle('active',app.showZones); drawChart(HISTORY+1+app.revealIdx); }
+function toggleCross(){ app.showCross=!app.showCross; document.getElementById('dtCross').classList.toggle('active',app.showCross); if(!app.showCross){app._crossX=null;app._crossY=null;drawChart(HISTORY+1+app.revealIdx);} }
 function openCandleGuide(){ document.getElementById('candleGuide').classList.add('show'); }
 function closeCandleGuide(){ document.getElementById('candleGuide').classList.remove('show'); }
 function openSDLesson(){ document.getElementById('sdLesson').classList.add('show'); }
