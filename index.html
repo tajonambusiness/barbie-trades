@@ -226,6 +226,28 @@ body {
 .trade-row .t-rr { font-size: 14px; font-weight: 900; }
 .trade-row .t-rr.win { color: #00897B; } .trade-row .t-rr.loss { color: #C62828; }
 
+/* ── POSITION CALCULATOR ── */
+#posCalc { display:none; position:fixed; inset:0; z-index:400; background:rgba(0,105,92,.1); backdrop-filter:blur(4px); align-items:center; justify-content:center; padding:16px; overflow-y:auto; }
+#posCalc.show { display:flex; }
+.pc-row { display:flex; align-items:center; gap:12px; margin-bottom:12px; flex-wrap:wrap; }
+.pc-label { font-size:13px; font-weight:800; color:#AD1457; width:140px; flex-shrink:0; }
+.pc-input { font-family:'Nunito',sans-serif; font-size:14px; font-weight:800; border:2px solid var(--border); border-radius:10px; padding:8px 12px; width:130px; color:var(--text); outline:none; }
+.pc-input:focus { border-color:var(--hp); }
+.pc-unit { font-size:13px; color:#888; font-weight:700; }
+.pc-result-box { background:linear-gradient(135deg,#E8F5E9,#F1F8E9); border:2px solid #A5D6A7; border-radius:16px; padding:16px 18px; margin:14px 0; }
+.pc-result-box.warn { background:linear-gradient(135deg,#FFF8E1,#FFFDE7); border-color:#FFE082; }
+.pc-result-box.good { background:linear-gradient(135deg,#E8F5E9,#F1F8E9); border-color:#A5D6A7; }
+.pc-big { font-size:28px; font-weight:900; color:#00695C; }
+.pc-big.red { color:#C62828; }
+.pc-contracts-table { width:100%; border-collapse:collapse; font-size:13px; margin-top:10px; }
+.pc-contracts-table th { background:#FCE4EC; color:#880E4F; font-size:11px; font-weight:900; text-transform:uppercase; padding:7px 10px; text-align:center; }
+.pc-contracts-table td { padding:8px 10px; text-align:center; font-weight:700; border-bottom:1px solid #F8E6F0; }
+.pc-contracts-table tr:last-child td { border-bottom:none; }
+.pc-contracts-table .rec { background:#E8F5E9; color:#00695C; }
+.dollar-box { background:linear-gradient(135deg,#E3F2FD,#E8EAF6); border:1.5px solid #90CAF9; border-radius:12px; padding:12px 14px; margin:10px 0; font-size:13px; line-height:1.9; }
+.dollar-box .d-win { color:#00695C; font-weight:900; font-size:15px; }
+.dollar-box .d-loss { color:#C62828; font-weight:900; font-size:15px; }
+
 /* ── CANDLE PATTERN CARDS ── */
 .cp-card { display:flex; align-items:flex-start; gap:13px; border-radius:13px; padding:11px 13px; margin-bottom:8px; }
 .cp-card.bull { background:#F0FBF9; border:1.5px solid #A5D6A7; border-left:4px solid #26A69A; }
@@ -344,6 +366,7 @@ select { font-family: 'Nunito',sans-serif; font-size: 13px; font-weight: 700; ba
     <button class="btn btn-secondary" onclick="openSDLesson()">📦 Supply &amp; Demand</button>
     <button class="btn btn-secondary" onclick="openPsychLesson()">🧠 Market Psychology</button>
     <button class="btn btn-secondary" onclick="openRRLesson()">📐 Win Rate Math</button>
+    <button class="btn btn-secondary" onclick="openPosCalc()">💰 Position Size</button>
     <button class="btn btn-secondary" onclick="goStats()">📊 My Journal</button>
   </div>
 
@@ -1153,6 +1176,64 @@ function openPsychLesson(){ document.getElementById('psychLesson').classList.add
 function closePsychLesson(){ document.getElementById('psychLesson').classList.remove('show'); }
 function openRRLesson(){ document.getElementById('rrLesson').classList.add('show'); rrCalc(); }
 function closeRRLesson(){ document.getElementById('rrLesson').classList.remove('show'); }
+function openPosCalc(){
+  document.getElementById('posCalc').classList.add('show');
+  // Restore saved values
+  const acct=localStorage.getItem('bt_acct')||'10000';
+  const rp=localStorage.getItem('bt_riskpct')||'1';
+  document.getElementById('pcAcct').value=acct;
+  document.getElementById('pcRiskPct').value=rp;
+  posCalc();
+}
+function closePosCalc(){ document.getElementById('posCalc').classList.remove('show'); }
+function posCalc(){
+  const acct=parseFloat(document.getElementById('pcAcct').value)||0;
+  const riskPct=parseFloat(document.getElementById('pcRiskPct').value)||1;
+  const instr=document.getElementById('pcInstr').value;
+  const stopPts=parseFloat(document.getElementById('pcStop').value)||0;
+  const tgtPts=parseFloat(document.getElementById('pcTarget').value)||0;
+  // Save account settings
+  if(acct>0){ localStorage.setItem('bt_acct',acct); localStorage.setItem('bt_riskpct',riskPct); }
+  const isES=instr.includes('ES');
+  const isMicro=instr.startsWith('M');
+  const ppt=instr==='MNQ'?2:instr==='NQ'?20:instr==='MES'?5:50;
+  const name=instr;
+  const dollarRisk=acct*riskPct/100;
+  document.getElementById('pcDollarRisk').textContent=`$${dollarRisk.toFixed(0)}`;
+  if(!stopPts||!acct){
+    document.getElementById('pcResults').innerHTML=`<p style="text-align:center;color:#AD1457;padding:10px;">Enter your account size and stop distance above ↑</p>`;
+    return;
+  }
+  const riskPerContract=stopPts*ppt;
+  const contracts=Math.max(1,Math.floor(dollarRisk/riskPerContract));
+  const rr=tgtPts>0?(tgtPts/stopPts):0;
+  const totalRisk=contracts*riskPerContract;
+  const totalProfit=tgtPts>0?contracts*tgtPts*ppt:0;
+  // Table rows
+  const rows=[1,2,3,5,10].map(n=>{
+    const r=(n*riskPerContract).toFixed(0);
+    const p=tgtPts>0?(n*tgtPts*ppt).toFixed(0):'—';
+    const isRec=n===contracts;
+    return `<tr${isRec?' class="rec"':''}><td>${n}${isRec?' ⭐':''}</td><td>-$${r}</td><td style="color:${tgtPts>0?'#00695C':'#888'}">${tgtPts>0?'+$'+p:'—'}</td><td>${(n*riskPerContract/acct*100).toFixed(2)}%</td></tr>`;
+  }).join('');
+  const rrColor=rr>=2?'#00695C':rr>=1.5?'#E65100':'#C62828';
+  const rrNote=rr>=2?'✅ Good — take the trade':rr>=1.5?'⚠️ Borderline — try to improve it':'❌ Too low — move your target further';
+  document.getElementById('pcResults').innerHTML=`
+    <div class="pc-result-box good" style="margin-bottom:12px;">
+      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:#555;margin-bottom:6px;">Recommended Position</div>
+      <div class="pc-big">${contracts} ${name} contract${contracts>1?'s':''}</div>
+      <div style="font-size:13px;color:#555;margin-top:4px;">
+        Risk: <strong style="color:#C62828">-$${totalRisk.toFixed(0)}</strong> &nbsp;·&nbsp;
+        ${tgtPts>0?`Profit: <strong style="color:#00695C">+$${totalProfit.toFixed(0)}</strong> &nbsp;·&nbsp;`:''}
+        ${rr>0?`R:R: <strong style="color:${rrColor}">${rr.toFixed(2)}:1 ${rrNote}</strong>`:'Set a target to see R:R'}
+      </div>
+    </div>
+    <table class="pc-contracts-table">
+      <tr><th>Contracts</th><th>Max Loss</th><th>Profit at Target</th><th>% of Account</th></tr>
+      ${rows}
+    </table>
+    <div style="font-size:11px;color:#AD1457;margin-top:8px;text-align:center;">⭐ = Recommended based on your ${riskPct}% risk rule</div>`;
+}
 function rrCalc(){
   const wr=parseFloat(document.getElementById('rrWR').value)||50;
   const rr=parseFloat(document.getElementById('rrRR').value)||2;
@@ -1451,7 +1532,22 @@ const ADV = {
       if(stopWrong) w+=`<br>⚠️ <strong style="color:#E53935">Stop is on wrong side!</strong> For a ${isLong?'long':'short'}, stop goes ${isLong?'BELOW':'ABOVE'} entry. ↩ Reset.`;
       if(tgtWrong)  w+=`<br>⚠️ <strong style="color:#E53935">Target is on wrong side!</strong> For a ${isLong?'long':'short'}, target goes ${isLong?'ABOVE':'BELOW'} entry. ↩ Reset.`;
       if(!w&&rr<2)  w+=`<br>💡 R:R = <strong>${rr.toFixed(2)}:1</strong> — try to get 2:1 or higher. Move target further.`;
-      return `Direction: <strong>${dir}</strong><br>Risk: <strong>${risk.toFixed(0)} pts</strong> → Reward: <strong>${reward.toFixed(0)} pts</strong> → R:R: <strong style="color:${rr>=2?'#26A69A':'#E91E8C'}">${rr.toFixed(2)}:1 ${rr>=2?'✅':'⚠️'}</strong>${w}`;
+      // Dollar amounts
+      const isES=app.instrument==='ES=F';
+      const microName=isES?'MES':'MNQ', microPPT=isES?5:2;
+      const fullName=isES?'ES':'NQ', fullPPT=isES?50:20;
+      const mRisk=(risk*microPPT).toFixed(0), mProfit=(reward*microPPT).toFixed(0);
+      const fRisk=(risk*fullPPT).toFixed(0), fProfit=(reward*fullPPT).toFixed(0);
+      const acct=parseInt(localStorage.getItem('bt_acct')||'0');
+      const riskPct=parseFloat(localStorage.getItem('bt_riskpct')||'1');
+      let contracts='';
+      if(acct>0){
+        const dollarRisk=(acct*riskPct/100), ctrcts=Math.max(1,Math.floor(dollarRisk/(risk*microPPT)));
+        const recRisk=(ctrcts*risk*microPPT).toFixed(0), recProfit=(ctrcts*reward*microPPT).toFixed(0);
+        contracts=`<br><div style="background:#FFF0F8;border-radius:8px;padding:6px 10px;margin-top:6px;font-size:12px;">💡 Your account (${riskPct}% risk = $${dollarRisk.toFixed(0)}): <strong>${ctrcts} ${microName} contract${ctrcts>1?'s':''}</strong> → Risk <strong style="color:#C62828">-$${recRisk}</strong> · Profit <strong style="color:#00695C">+$${recProfit}</strong></div>`;
+      }
+      const dollarRow=`<br><div class="dollar-box">💵 Per contract: &nbsp;<strong>${microName}</strong>: Risk <span class="d-loss">-$${mRisk}</span> · Profit <span class="d-win">+$${mProfit}</span> &nbsp;|&nbsp; <strong>${fullName}</strong>: Risk <span class="d-loss">-$${fRisk}</span> · Profit <span class="d-win">+$${fProfit}</span>${contracts}</div>`;
+      return `Direction: <strong>${dir}</strong><br>Risk: <strong>${risk.toFixed(0)} pts</strong> → Reward: <strong>${reward.toFixed(0)} pts</strong> → R:R: <strong style="color:${rr>=2?'#26A69A':'#E91E8C'}">${rr.toFixed(2)}:1 ${rr>=2?'✅':'⚠️'}</strong>${w}${dollarRow}`;
     },
     actions(){ return `
       <button class="btn btn-primary" onclick="startReveal()">✨ See What Happened!</button>
@@ -2257,6 +2353,88 @@ updateWelcomeStats();
 
     <div style="text-align:center;margin-top:20px;">
       <button class="btn btn-primary" onclick="closeSDLesson()">Got it — Show Me on the Chart! 💕</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── POSITION SIZE CALCULATOR ── -->
+<div id="posCalc">
+  <div class="cg-card">
+    <h2 style="font-family:'Pacifico',cursive;color:#E91E8C;text-align:center;margin-bottom:6px;">💰 Position Size Calculator</h2>
+    <p style="text-align:center;color:#AD1457;font-size:13px;margin-bottom:18px;">Know your exact dollar risk and profit before every trade</p>
+
+    <div class="cg-section">Contract Values — Know These Cold</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
+      <div style="background:#E8F5E9;border-radius:12px;padding:12px;text-align:center;border:2px solid #A5D6A7;">
+        <div style="font-size:20px;margin-bottom:4px;">📊</div>
+        <strong style="color:#00695C;font-size:14px;">MNQ (Micro NQ)</strong>
+        <div style="font-size:24px;font-weight:900;color:#00695C;">$2<span style="font-size:13px;font-weight:600">/point</span></div>
+        <div style="font-size:11px;color:#555;margin-top:4px;">100 pt move = $200<br>Best for beginners</div>
+      </div>
+      <div style="background:#E3F2FD;border-radius:12px;padding:12px;text-align:center;border:2px solid #90CAF9;">
+        <div style="font-size:20px;margin-bottom:4px;">📊</div>
+        <strong style="color:#1565C0;font-size:14px;">MES (Micro ES)</strong>
+        <div style="font-size:24px;font-weight:900;color:#1565C0;">$5<span style="font-size:13px;font-weight:600">/point</span></div>
+        <div style="font-size:11px;color:#555;margin-top:4px;">10 pt move = $50<br>Best for beginners</div>
+      </div>
+      <div style="background:#FFF8E1;border-radius:12px;padding:12px;text-align:center;border:2px solid #FFE082;">
+        <strong style="color:#E65100;font-size:13px;">NQ (Full Size)</strong>
+        <div style="font-size:20px;font-weight:900;color:#E65100;">$20<span style="font-size:11px;font-weight:600">/point</span></div>
+        <div style="font-size:10px;color:#888;">100 pt move = $2,000</div>
+      </div>
+      <div style="background:#FFF8E1;border-radius:12px;padding:12px;text-align:center;border:2px solid #FFE082;">
+        <strong style="color:#E65100;font-size:13px;">ES (Full Size)</strong>
+        <div style="font-size:20px;font-weight:900;color:#E65100;">$50<span style="font-size:11px;font-weight:600">/point</span></div>
+        <div style="font-size:10px;color:#888;">10 pt move = $500</div>
+      </div>
+    </div>
+
+    <div class="cg-section">Your Account Settings</div>
+    <div class="pc-row">
+      <span class="pc-label">Account Size</span>
+      <span style="font-size:16px;font-weight:800;color:#555;">$</span>
+      <input class="pc-input" id="pcAcct" type="number" value="10000" min="500" step="500" oninput="posCalc()">
+    </div>
+    <div class="pc-row">
+      <span class="pc-label">Max Risk Per Trade</span>
+      <input class="pc-input" id="pcRiskPct" type="number" value="1" min="0.5" max="5" step="0.5" oninput="posCalc()">
+      <span class="pc-unit">% = $<span id="pcDollarRisk">100</span></span>
+    </div>
+    <div style="background:#FFF0F8;border-radius:10px;padding:10px 12px;font-size:12px;color:#880E4F;margin-bottom:14px;">
+      💡 <strong>Rule:</strong> Never risk more than 1-2% per trade. At 1%, a losing streak of 10 trades only costs 10% of your account — you can recover. At 10% risk, 10 losses = account wiped.
+    </div>
+
+    <div class="cg-section">This Trade Setup</div>
+    <div class="pc-row">
+      <span class="pc-label">Instrument</span>
+      <select class="pc-input" id="pcInstr" onchange="posCalc()" style="width:140px;">
+        <option value="MNQ">MNQ — Micro NQ</option>
+        <option value="MES">MES — Micro ES</option>
+        <option value="NQ">NQ — Full NQ</option>
+        <option value="ES">ES — Full ES</option>
+      </select>
+    </div>
+    <div class="pc-row">
+      <span class="pc-label">Stop Distance</span>
+      <input class="pc-input" id="pcStop" type="number" value="50" min="1" step="1" oninput="posCalc()">
+      <span class="pc-unit">points</span>
+    </div>
+    <div class="pc-row">
+      <span class="pc-label">Target Distance</span>
+      <input class="pc-input" id="pcTarget" type="number" value="100" min="1" step="1" oninput="posCalc()">
+      <span class="pc-unit">points</span>
+    </div>
+
+    <div class="cg-section">Your Numbers</div>
+    <div id="pcResults"><p style="text-align:center;color:#AD1457;padding:10px;">Fill in the fields above to calculate ↑</p></div>
+
+    <div class="cg-section">How to Find Stop &amp; Target Distance</div>
+    <div class="cg-rule"><strong>Stop distance</strong> = Entry price − Stop price (for a long). Example: Entry 20,000, Stop 19,950 = 50 points.</div>
+    <div class="cg-rule"><strong>Target distance</strong> = Target price − Entry price (for a long). At 2:1 R:R, target should be 2× your stop distance.</div>
+    <div class="cg-rule"><strong>Pro tip:</strong> Set your account size once and leave it. The calculator saves it automatically. Then just update your stop and target distances for each new setup.</div>
+
+    <div style="text-align:center;margin-top:20px;">
+      <button class="btn btn-primary" onclick="closePosCalc()">Got It — I Know My Numbers! 💕</button>
     </div>
   </div>
 </div>
