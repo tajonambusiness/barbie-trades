@@ -226,6 +226,23 @@ body {
 .trade-row .t-rr { font-size: 14px; font-weight: 900; }
 .trade-row .t-rr.win { color: #00897B; } .trade-row .t-rr.loss { color: #C62828; }
 
+/* ── CANDLE PATTERN CARDS ── */
+.cp-card { display:flex; align-items:flex-start; gap:13px; border-radius:13px; padding:11px 13px; margin-bottom:8px; }
+.cp-card.bull { background:#F0FBF9; border:1.5px solid #A5D6A7; border-left:4px solid #26A69A; }
+.cp-card.bear { background:#FFF3F3; border:1.5px solid #FFCDD2; border-left:4px solid #EF5350; }
+.cp-card.neut { background:#F5F0FF; border:1.5px solid #CE93D8; border-left:4px solid #9C27B0; }
+.cp-svg { flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+.cp-info { flex:1; min-width:0; }
+.cp-nameline { display:flex; align-items:center; justify-content:space-between; margin-bottom:2px; }
+.cp-pname { font-size:14px; font-weight:900; color:var(--text); }
+.cp-strength { font-size:12px; }
+.cp-type { font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.7px; margin-bottom:4px; }
+.cp-card.bull .cp-type { color:#00796B; }
+.cp-card.bear .cp-type { color:#C62828; }
+.cp-card.neut .cp-type { color:#6A1B9A; }
+.cp-desc { font-size:12px; color:#555; line-height:1.55; margin-bottom:5px; }
+.cp-entry { font-size:11px; color:#777; background:rgba(0,0,0,.05); border-radius:6px; padding:4px 7px; }
+
 /* ── MISC ── */
 select { font-family: 'Nunito',sans-serif; font-size: 13px; font-weight: 700; background: white; border: 2px solid var(--hp); border-radius: 12px; padding: 8px 12px; color: var(--text); cursor: pointer; outline: none; }
 .spinner { width: 44px; height: 44px; border: 4px solid var(--lp); border-top: 4px solid var(--hp); border-radius: 50%; animation: spin .75s linear infinite; }
@@ -1987,43 +2004,157 @@ updateWelcomeStats();
 <!-- ══════════════ CANDLE GUIDE OVERLAY ══════════════ -->
 <div id="candleGuide">
   <div class="cg-card">
-    <div class="cg-title">🕯️ Candle Patterns Guide</div>
-    <div class="cg-sub">Hover over any candle on the chart to see its name. Study these patterns — they're your entry signals.</div>
+    <div class="cg-title">🕯️ Candle Patterns</div>
+    <div class="cg-sub" style="margin-bottom:14px;">Every candle is a battle report. The body shows who won. The wicks show who was rejected. Learn to read them and you read the market.</div>
 
-    <div class="cg-section">📈 Bullish Patterns — Signal: Price going UP</div>
-    <div class="cg-grid">
-      <div class="cg-pattern bull"><div class="cg-pname">🟢 Hammer</div><div class="cg-psig">Small body at top, long lower wick (≥2× body). At the bottom of a move = buyers rejected lower prices hard. Strong buy signal at support.</div></div>
-      <div class="cg-pattern bull"><div class="cg-pname">🟢 Bullish Engulfing</div><div class="cg-psig">Big green candle completely swallows the previous red candle. Buyers completely took over. One of the most powerful buy signals.</div></div>
-      <div class="cg-pattern bull"><div class="cg-pname">🟢 Bullish Pin Bar</div><div class="cg-psig">Long lower wick (≥2.5× the body) with a small body near the top. Price shot down but buyers slammed it back up. Buy signal.</div></div>
-      <div class="cg-pattern bull"><div class="cg-pname">🟢 Bullish Marubozu</div><div class="cg-psig">Big green candle with almost no wicks. Pure buyer momentum — nobody pushed back. Strong continuation signal upward.</div></div>
-      <div class="cg-pattern bull"><div class="cg-pname">🟢 Dragonfly Doji</div><div class="cg-psig">Opens and closes at the top, long lower wick. Buyers rejected the lows completely. Very bullish, especially at support levels.</div></div>
+    <div style="background:linear-gradient(135deg,#E91E8C,#9C27B0);border-radius:14px;padding:13px 16px;margin-bottom:14px;color:white;font-size:13px;line-height:1.7;">
+      <strong>The Golden Rule:</strong> A pattern alone is not a trade. It becomes a signal when it appears at a <strong>key level</strong> (demand zone, supply zone) <strong>with the trend behind it</strong>.
+    </div>
+    <div style="display:flex;gap:14px;font-size:11px;color:#888;margin-bottom:16px;flex-wrap:wrap;">
+      <span>⭐ Moderate</span><span>⭐⭐ Strong</span><span>⭐⭐⭐ Very Powerful</span>
     </div>
 
-    <div class="cg-section">📉 Bearish Patterns — Signal: Price going DOWN</div>
-    <div class="cg-grid">
-      <div class="cg-pattern bear"><div class="cg-pname">🔴 Shooting Star</div><div class="cg-psig">Small body at bottom, long upper wick (≥2× body). At the top of a move = sellers rejected higher prices hard. Sell signal at resistance.</div></div>
-      <div class="cg-pattern bear"><div class="cg-pname">🔴 Bearish Engulfing</div><div class="cg-psig">Big red candle completely swallows the previous green candle. Sellers completely took over. One of the most powerful sell signals.</div></div>
-      <div class="cg-pattern bear"><div class="cg-pname">🔴 Bearish Pin Bar</div><div class="cg-psig">Long upper wick (≥2.5× the body) with a small body near the bottom. Price shot up but sellers slammed it back down. Sell signal.</div></div>
-      <div class="cg-pattern bear"><div class="cg-pname">🔴 Bearish Marubozu</div><div class="cg-psig">Big red candle with almost no wicks. Pure seller momentum — nobody pushed back. Strong continuation signal downward.</div></div>
-      <div class="cg-pattern bear"><div class="cg-pname">🔴 Gravestone Doji</div><div class="cg-psig">Opens and closes at the bottom, long upper wick. Sellers rejected the highs completely. Very bearish, especially at resistance.</div></div>
+    <div class="cg-section">📈 Bullish Patterns — Price Going UP</div>
+
+    <div class="cp-card bull">
+      <div class="cp-svg"><svg viewBox="0 0 50 90" width="44" height="80"><line x1="25" y1="8" x2="25" y2="22" stroke="#26A69A" stroke-width="2.5" stroke-linecap="round"/><rect x="11" y="22" width="28" height="14" fill="#26A69A" rx="2"/><line x1="25" y1="36" x2="25" y2="82" stroke="#26A69A" stroke-width="2.5" stroke-linecap="round"/></svg></div>
+      <div class="cp-info">
+        <div class="cp-nameline"><span class="cp-pname">Hammer</span><span class="cp-strength">⭐⭐⭐</span></div>
+        <div class="cp-type">Bullish Reversal</div>
+        <div class="cp-desc">Small body at top, long lower wick (≥2× body). Sellers pushed price way down but buyers came back and closed near the open. Strong rejection of lows.</div>
+        <div class="cp-entry">🎯 Enter: Next green candle confirms &nbsp;·&nbsp; Stop: Below the wick</div>
+      </div>
+    </div>
+
+    <div class="cp-card bull">
+      <div class="cp-svg"><svg viewBox="0 0 100 90" width="88" height="80"><line x1="25" y1="12" x2="25" y2="30" stroke="#EF5350" stroke-width="2" stroke-linecap="round"/><rect x="12" y="30" width="26" height="26" fill="#EF5350" rx="2"/><line x1="25" y1="56" x2="25" y2="70" stroke="#EF5350" stroke-width="2" stroke-linecap="round"/><line x1="75" y1="8" x2="75" y2="20" stroke="#26A69A" stroke-width="2" stroke-linecap="round"/><rect x="62" y="20" width="26" height="56" fill="#26A69A" rx="2"/><line x1="75" y1="76" x2="75" y2="82" stroke="#26A69A" stroke-width="2" stroke-linecap="round"/></svg></div>
+      <div class="cp-info">
+        <div class="cp-nameline"><span class="cp-pname">Bullish Engulfing</span><span class="cp-strength">⭐⭐⭐</span></div>
+        <div class="cp-type">Bullish Reversal · 2-Candle Pattern</div>
+        <div class="cp-desc">Big green candle completely swallows the previous red one. Buyers took over completely — one of the most powerful buy signals on the chart.</div>
+        <div class="cp-entry">🎯 Enter: Close of green candle or next open &nbsp;·&nbsp; Stop: Below the pattern low</div>
+      </div>
+    </div>
+
+    <div class="cp-card bull">
+      <div class="cp-svg"><svg viewBox="0 0 50 90" width="44" height="80"><line x1="25" y1="8" x2="25" y2="18" stroke="#26A69A" stroke-width="2.5" stroke-linecap="round"/><rect x="11" y="18" width="28" height="10" fill="#26A69A" rx="2"/><line x1="25" y1="28" x2="25" y2="82" stroke="#26A69A" stroke-width="2.5" stroke-linecap="round"/></svg></div>
+      <div class="cp-info">
+        <div class="cp-nameline"><span class="cp-pname">Bullish Pin Bar</span><span class="cp-strength">⭐⭐⭐</span></div>
+        <div class="cp-type">Bullish Reversal / Continuation</div>
+        <div class="cp-desc">Tiny body near the top with a very long lower tail (≥2.5× body). Price was slammed down hard but buyers drove it all the way back up. Leaves a long shadow.</div>
+        <div class="cp-entry">🎯 Enter: Next candle open &nbsp;·&nbsp; Stop: Below the pin bar wick</div>
+      </div>
+    </div>
+
+    <div class="cp-card bull">
+      <div class="cp-svg"><svg viewBox="0 0 50 90" width="44" height="80"><rect x="11" y="8" width="28" height="74" fill="#26A69A" rx="3"/></svg></div>
+      <div class="cp-info">
+        <div class="cp-nameline"><span class="cp-pname">Bullish Marubozu</span><span class="cp-strength">⭐⭐</span></div>
+        <div class="cp-type">Bullish Continuation</div>
+        <div class="cp-desc">Full green body with almost no wicks — pure buying pressure all session. Nobody pushed back. The bulls were in total control from open to close.</div>
+        <div class="cp-entry">🎯 Enter: Next candle open &nbsp;·&nbsp; Stop: Below the Marubozu low</div>
+      </div>
+    </div>
+
+    <div class="cp-card bull">
+      <div class="cp-svg"><svg viewBox="0 0 50 90" width="44" height="80"><rect x="11" y="12" width="28" height="4" fill="#26A69A" rx="2"/><line x1="25" y1="16" x2="25" y2="82" stroke="#26A69A" stroke-width="2.5" stroke-linecap="round"/></svg></div>
+      <div class="cp-info">
+        <div class="cp-nameline"><span class="cp-pname">Dragonfly Doji</span><span class="cp-strength">⭐⭐</span></div>
+        <div class="cp-type">Bullish Reversal</div>
+        <div class="cp-desc">Opens and closes at the top with a long lower wick. Sellers tried to push price down all session but buyers completely took control by close.</div>
+        <div class="cp-entry">🎯 Enter: Confirmation up candle next &nbsp;·&nbsp; Stop: Below the wick</div>
+      </div>
+    </div>
+
+    <div class="cg-section">📉 Bearish Patterns — Price Going DOWN</div>
+
+    <div class="cp-card bear">
+      <div class="cp-svg"><svg viewBox="0 0 50 90" width="44" height="80"><line x1="25" y1="8" x2="25" y2="62" stroke="#EF5350" stroke-width="2.5" stroke-linecap="round"/><rect x="11" y="62" width="28" height="14" fill="#EF5350" rx="2"/><line x1="25" y1="76" x2="25" y2="82" stroke="#EF5350" stroke-width="2.5" stroke-linecap="round"/></svg></div>
+      <div class="cp-info">
+        <div class="cp-nameline"><span class="cp-pname">Shooting Star</span><span class="cp-strength">⭐⭐⭐</span></div>
+        <div class="cp-type">Bearish Reversal</div>
+        <div class="cp-desc">Small body at bottom, long upper wick (≥2× body). Buyers pushed price high but sellers rejected it and slammed it back down. Hard rejection of highs.</div>
+        <div class="cp-entry">🎯 Enter: Next red candle confirms &nbsp;·&nbsp; Stop: Above the wick</div>
+      </div>
+    </div>
+
+    <div class="cp-card bear">
+      <div class="cp-svg"><svg viewBox="0 0 100 90" width="88" height="80"><line x1="25" y1="20" x2="25" y2="32" stroke="#26A69A" stroke-width="2" stroke-linecap="round"/><rect x="12" y="32" width="26" height="24" fill="#26A69A" rx="2"/><line x1="25" y1="56" x2="25" y2="68" stroke="#26A69A" stroke-width="2" stroke-linecap="round"/><line x1="75" y1="8" x2="75" y2="20" stroke="#EF5350" stroke-width="2" stroke-linecap="round"/><rect x="62" y="20" width="26" height="56" fill="#EF5350" rx="2"/><line x1="75" y1="76" x2="75" y2="82" stroke="#EF5350" stroke-width="2" stroke-linecap="round"/></svg></div>
+      <div class="cp-info">
+        <div class="cp-nameline"><span class="cp-pname">Bearish Engulfing</span><span class="cp-strength">⭐⭐⭐</span></div>
+        <div class="cp-type">Bearish Reversal · 2-Candle Pattern</div>
+        <div class="cp-desc">Big red candle completely swallows the previous green one. Sellers took over completely — one of the most powerful sell signals on the chart.</div>
+        <div class="cp-entry">🎯 Enter: Close of red candle or next open &nbsp;·&nbsp; Stop: Above the pattern high</div>
+      </div>
+    </div>
+
+    <div class="cp-card bear">
+      <div class="cp-svg"><svg viewBox="0 0 50 90" width="44" height="80"><line x1="25" y1="8" x2="25" y2="62" stroke="#EF5350" stroke-width="2.5" stroke-linecap="round"/><rect x="11" y="62" width="28" height="10" fill="#EF5350" rx="2"/><line x1="25" y1="72" x2="25" y2="82" stroke="#EF5350" stroke-width="2.5" stroke-linecap="round"/></svg></div>
+      <div class="cp-info">
+        <div class="cp-nameline"><span class="cp-pname">Bearish Pin Bar</span><span class="cp-strength">⭐⭐⭐</span></div>
+        <div class="cp-type">Bearish Reversal / Continuation</div>
+        <div class="cp-desc">Tiny body near the bottom with a very long upper tail (≥2.5× body). Price shot up hard but sellers drove it all the way back down. Leaves a long shadow above.</div>
+        <div class="cp-entry">🎯 Enter: Next candle open &nbsp;·&nbsp; Stop: Above the pin bar wick</div>
+      </div>
+    </div>
+
+    <div class="cp-card bear">
+      <div class="cp-svg"><svg viewBox="0 0 50 90" width="44" height="80"><rect x="11" y="8" width="28" height="74" fill="#EF5350" rx="3"/></svg></div>
+      <div class="cp-info">
+        <div class="cp-nameline"><span class="cp-pname">Bearish Marubozu</span><span class="cp-strength">⭐⭐</span></div>
+        <div class="cp-type">Bearish Continuation</div>
+        <div class="cp-desc">Full red body with almost no wicks — pure selling pressure all session. Nobody pushed back. The bears were in total control from open to close.</div>
+        <div class="cp-entry">🎯 Enter: Next candle open &nbsp;·&nbsp; Stop: Above the Marubozu high</div>
+      </div>
+    </div>
+
+    <div class="cp-card bear">
+      <div class="cp-svg"><svg viewBox="0 0 50 90" width="44" height="80"><line x1="25" y1="8" x2="25" y2="76" stroke="#EF5350" stroke-width="2.5" stroke-linecap="round"/><rect x="11" y="76" width="28" height="4" fill="#EF5350" rx="2"/></svg></div>
+      <div class="cp-info">
+        <div class="cp-nameline"><span class="cp-pname">Gravestone Doji</span><span class="cp-strength">⭐⭐</span></div>
+        <div class="cp-type">Bearish Reversal</div>
+        <div class="cp-desc">Opens and closes at the bottom with a long upper wick. Buyers tried to push price up all session but sellers completely took control by close.</div>
+        <div class="cp-entry">🎯 Enter: Confirmation down candle next &nbsp;·&nbsp; Stop: Above the wick</div>
+      </div>
     </div>
 
     <div class="cg-section">⚖️ Neutral Patterns — Wait for Confirmation</div>
-    <div class="cg-grid">
-      <div class="cg-pattern neut"><div class="cg-pname">⚪ Doji</div><div class="cg-psig">Open and close are almost equal. Nobody won — bulls and bears fought to a draw. Watch the NEXT candle to see who wins.</div></div>
-      <div class="cg-pattern neut"><div class="cg-pname">⚪ Inside Bar</div><div class="cg-psig">The candle's high and low fit completely inside the previous candle. Market is coiling up. Breakout coming — watch which direction it goes.</div></div>
-      <div class="cg-pattern neut"><div class="cg-pname">⚪ Spinning Top</div><div class="cg-psig">Small body in the middle with wicks on both sides. Indecision. Market tried both directions and came back to center. Wait.</div></div>
+
+    <div class="cp-card neut">
+      <div class="cp-svg"><svg viewBox="0 0 50 90" width="44" height="80"><line x1="25" y1="8" x2="25" y2="43" stroke="#9C27B0" stroke-width="2.5" stroke-linecap="round"/><rect x="11" y="43" width="28" height="5" fill="#9C27B0" rx="2"/><line x1="25" y1="48" x2="25" y2="82" stroke="#9C27B0" stroke-width="2.5" stroke-linecap="round"/></svg></div>
+      <div class="cp-info">
+        <div class="cp-nameline"><span class="cp-pname">Doji</span><span class="cp-strength">⭐</span></div>
+        <div class="cp-type">Indecision — Do Not Trade Yet</div>
+        <div class="cp-desc">Open and close are nearly the same price. Neither buyers nor sellers won. The market is at a crossroads — waiting to decide direction.</div>
+        <div class="cp-entry">👀 Watch: The NEXT candle shows who won. Trade that candle, not the doji.</div>
+      </div>
     </div>
 
-    <div class="cg-section">🏰 Supply &amp; Demand Zones</div>
-    <div class="cg-rule"><strong>Demand Zone (Buy Zone)</strong> — A price area where buyers stepped in before. Price shot UP from here in the past. When price returns to this level, buyers often step in again. Look to <strong>BUY</strong> at demand zones.</div>
-    <div class="cg-rule"><strong>Supply Zone (Sell Zone)</strong> — A price area where sellers stepped in before. Price fell DOWN from here in the past. When price returns to this level, sellers often step in again. Look to <strong>SELL SHORT</strong> at supply zones.</div>
-    <div class="cg-rule"><strong>The Rule:</strong> Don't buy at supply (resistance). Don't sell at demand (support). Wait for price to reach the right zone, then look for a candle pattern signal to enter.</div>
+    <div class="cp-card neut">
+      <div class="cp-svg"><svg viewBox="0 0 100 90" width="88" height="80"><line x1="25" y1="8" x2="25" y2="18" stroke="#78909C" stroke-width="2" stroke-linecap="round"/><rect x="12" y="18" width="26" height="54" fill="#78909C" rx="2" opacity="0.7"/><line x1="25" y1="72" x2="25" y2="82" stroke="#78909C" stroke-width="2" stroke-linecap="round"/><line x1="75" y1="28" x2="75" y2="36" stroke="#9C27B0" stroke-width="2" stroke-linecap="round"/><rect x="62" y="36" width="26" height="22" fill="#9C27B0" rx="2" opacity="0.7"/><line x1="75" y1="58" x2="75" y2="64" stroke="#9C27B0" stroke-width="2" stroke-linecap="round"/></svg></div>
+      <div class="cp-info">
+        <div class="cp-nameline"><span class="cp-pname">Inside Bar</span><span class="cp-strength">⭐</span></div>
+        <div class="cp-type">Compression — Breakout Coming</div>
+        <div class="cp-desc">The entire candle (high to low) fits inside the previous candle's range. Market is coiling, building energy. A big move is coming — you just don't know which way yet.</div>
+        <div class="cp-entry">👀 Watch: Trade the breakout candle. Direction of break = direction of trade.</div>
+      </div>
+    </div>
 
-    <div class="cg-section">📐 Trend Structure (HH/HL/LH/LL)</div>
-    <div class="cg-rule"><strong>Uptrend = Higher Highs (HH) + Higher Lows (HL)</strong> — Each peak is higher than the last, and each pullback holds higher than the last. Price is making a staircase UP.</div>
-    <div class="cg-rule"><strong>Downtrend = Lower Highs (LH) + Lower Lows (LL)</strong> — Each peak is lower than the last, and each pullback drops lower than the last. Price is making a staircase DOWN.</div>
-    <div class="cg-rule"><strong>Pro tip:</strong> Toggle <strong>📐 Structure</strong> on the chart to see HH/HL/LH/LL labeled automatically. Toggle <strong>🔲 Zones</strong> to see Supply &amp; Demand zones highlighted.</div>
+    <div class="cp-card neut">
+      <div class="cp-svg"><svg viewBox="0 0 50 90" width="44" height="80"><line x1="25" y1="10" x2="25" y2="35" stroke="#9C27B0" stroke-width="2.5" stroke-linecap="round"/><rect x="11" y="35" width="28" height="20" fill="#9C27B0" rx="2" opacity="0.7"/><line x1="25" y1="55" x2="25" y2="80" stroke="#9C27B0" stroke-width="2.5" stroke-linecap="round"/></svg></div>
+      <div class="cp-info">
+        <div class="cp-nameline"><span class="cp-pname">Spinning Top</span><span class="cp-strength">⭐</span></div>
+        <div class="cp-type">Indecision</div>
+        <div class="cp-desc">Small body in the center with roughly equal wicks on both sides. Market tested both directions and came back to the middle. Neither side is in control.</div>
+        <div class="cp-entry">👀 Watch: At support = possible reversal up. At resistance = possible reversal down.</div>
+      </div>
+    </div>
+
+    <div class="cg-section">🔑 How to Actually Use These</div>
+    <div class="cg-rule"><strong>Step 1 — Trend first:</strong> EMAs tell you the direction. Only look for bullish patterns in an uptrend. Only look for bearish patterns in a downtrend.</div>
+    <div class="cg-rule"><strong>Step 2 — Zone second:</strong> The pattern must appear at a demand zone (for buys) or supply zone (for sells). A hammer in the middle of a range means nothing. A hammer at demand in an uptrend? That's your signal.</div>
+    <div class="cg-rule"><strong>Step 3 — Confirm:</strong> For reversal patterns, wait for the NEXT candle to move in your direction before entering. This filters out false signals.</div>
+    <div class="cg-rule" style="background:linear-gradient(135deg,#E8F5E9,#F1F8E9);border-color:#A5D6A7;"><strong>Pro tip:</strong> The three most powerful patterns for NQ/ES are Bullish Engulfing, Bearish Engulfing, and Pin Bars. Learn those three cold before worrying about the rest.</div>
 
     <div style="text-align:center;margin-top:20px;">
       <button class="btn btn-primary" onclick="closeCandleGuide()">Got it — Let me Practice! 💕</button>
