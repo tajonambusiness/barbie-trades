@@ -667,9 +667,9 @@ function xToCandle(clientX){
   return app.winStart+Math.max(0,Math.min(visCount-1,Math.round((xPx-PAD.left)/candleW)));
 }
 
-document.getElementById('chartCanvas').addEventListener('click',e=>{
+function handleChartTap(clientX, clientY){
   if(app.drawTool){
-    const price=yToPrice(e.clientY), candleIdx=xToCandle(e.clientX);
+    const price=yToPrice(clientY), candleIdx=xToCandle(clientX);
     if(app.drawTool==='hline'){
       app.drawings.push({type:'hline',price,color:app.drawColor});
     } else if(app.drawTool==='tline'){
@@ -679,10 +679,34 @@ document.getElementById('chartCanvas').addEventListener('click',e=>{
     drawChart(HISTORY+1+app.revealIdx); return;
   }
   if(!['entry','stop','target'].includes(app.phase))return;
-  const price=yToPrice(e.clientY);
+  const price=yToPrice(clientY);
   if(app.phase==='entry'){app.entry=price;setPhase('stop');}
   else if(app.phase==='stop'){app.stop=price;setPhase('target');}
   else if(app.phase==='target'){app.target=price;setPhase('confirm');}
+}
+
+// Track last touch so touchend can use accurate coordinates
+let _lastTapY=0, _lastTapX=0, _tapMoved=false;
+document.getElementById('chartCanvas').addEventListener('touchstart',e=>{
+  if(e.touches.length===1){ _lastTapX=e.touches[0].clientX; _lastTapY=e.touches[0].clientY; _tapMoved=false; }
+},{passive:true});
+document.getElementById('chartCanvas').addEventListener('touchmove',e=>{
+  if(e.touches.length===1){
+    const dx=e.touches[0].clientX-_lastTapX, dy=e.touches[0].clientY-_lastTapY;
+    if(Math.abs(dx)>8||Math.abs(dy)>8) _tapMoved=true;
+  }
+},{passive:true});
+document.getElementById('chartCanvas').addEventListener('touchend',e=>{
+  if(e.changedTouches.length===1&&!_tapMoved){
+    // Use touchend coordinates — more accurate on iOS than synthesized click
+    handleChartTap(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+  }
+},{passive:true});
+
+document.getElementById('chartCanvas').addEventListener('click',e=>{
+  // Skip on touch devices — handled by touchend above
+  if(e.sourceCapabilities&&!e.sourceCapabilities.firesTouchEvents) handleChartTap(e.clientX, e.clientY);
+  else if(!('ontouchstart' in window)) handleChartTap(e.clientX, e.clientY);
 });
 
 document.getElementById('chartCanvas').addEventListener('mousemove',e=>{
@@ -991,37 +1015,37 @@ const ADV = {
       <button class="btn btn-neu" onclick="chooseTrend('sideways')">↔️ Sideways</button>`; }
   },
   entry:{
-    dots:5, step:2, icon:'🎯', title:'Step 2 — Click your ENTRY price on the chart',
+    dots:5, step:2, icon:'🎯', title:'Step 2 — TAP the chart to set ENTRY',
     desc(){
       const isLong=app.trend!=='bearish';
       return isLong
-        ? `You picked <strong style="color:#26A69A">Bullish (going UP)</strong> — you are buying.<br>Click near the current price (right of "NOW →"). <strong>Best entries are when price has just pulled back to touch the pink EMA 20 line.</strong>`
-        : `You picked <strong style="color:#EF5350">Bearish (going DOWN)</strong> — you are selling short.<br>Click near the current price (right of "NOW →"). <strong>Best entries are when price bounced up to touch EMA 20 from below.</strong>`;
+        ? `You're <strong style="color:#26A69A">BUYING 📈</strong> — tap the chart at the price you'd enter the trade.<br><br>👉 Tap right near the <strong>NOW →</strong> line. Best spot = where price just touched the pink EMA 20.`
+        : `You're <strong style="color:#EF5350">SELLING SHORT 📉</strong> — tap the chart at the price you'd enter the trade.<br><br>👉 Tap right near the <strong>NOW →</strong> line. Best spot = where price just bounced up to EMA 20 from below.`;
     },
     actions(){
-      const hints=app.mode==='intermediate'?`<button class="btn btn-hint" onclick="showMeLevels()">💡 Show Me Suggested Levels</button>`:'';
-      return `${hints}<button class="btn btn-secondary btn-sm" onclick="resetLevels()">↩ Start Over</button>`;
+      const hints=app.mode==='intermediate'?`<button class="btn btn-hint" onclick="showMeLevels()">💡 Show Me Where</button>`:'';
+      return `${hints}<button class="btn btn-secondary btn-sm" onclick="resetLevels()">↩ Start Over</button><button class="btn btn-secondary btn-sm" onclick="goBackBeginner()">🌸 Back to Beginner</button>`;
     }
   },
   stop:{
-    dots:5, step:3, icon:'🛑', title:'Step 3 — Click your STOP LOSS',
+    dots:5, step:3, icon:'🛑', title:'Step 3 — TAP the chart for STOP LOSS',
     desc(){
       const isLong=app.trend!=='bearish';
       return isLong
-        ? `Stop loss = the price where you admit you were wrong and exit.<br><br>You are <strong style="color:#26A69A">BUYING (going up)</strong> — so stop goes <strong>BELOW your entry</strong>.<br>Click somewhere <strong>below</strong> where you placed your entry.<br><em>Tip: put it just below the most recent swing low (lowest point you can see).</em>`
-        : `Stop loss = the price where you admit you were wrong and exit.<br><br>You are <strong style="color:#EF5350">SELLING SHORT (going down)</strong> — so stop goes <strong>ABOVE your entry</strong>.<br>Click somewhere <strong>above</strong> where you placed your entry.<br><em>Tip: put it just above the most recent swing high (highest point you can see).</em>`;
+        ? `Stop loss = if price goes here, you exit with a small loss.<br><br>You're <strong style="color:#26A69A">BUYING</strong> — tap <strong>BELOW</strong> your entry (the pink line).<br><em>Put it below the lowest candle wick you can see.</em>`
+        : `Stop loss = if price goes here, you exit with a small loss.<br><br>You're <strong style="color:#EF5350">SELLING SHORT</strong> — tap <strong>ABOVE</strong> your entry (the pink line).<br><em>Put it above the highest candle wick you can see.</em>`;
     },
     actions(){ return `<button class="btn btn-secondary btn-sm" onclick="backToEntry()">← Back to Entry</button>`; }
   },
   target:{
-    dots:5, step:4, icon:'💰', title:'Step 4 — Click your TAKE PROFIT',
+    dots:5, step:4, icon:'💰', title:'Step 4 — TAP the chart for TAKE PROFIT',
     desc(){
       const isLong=app.trend!=='bearish';
       const risk=app.entry&&app.stop?Math.abs(app.entry-app.stop).toFixed(0):'?';
       const min2R=app.entry&&app.stop?(isLong?(app.entry+Math.abs(app.entry-app.stop)*2).toFixed(0):(app.entry-Math.abs(app.entry-app.stop)*2).toFixed(0)):'?';
       return isLong
-        ? `Take profit = where you cash out your winnings.<br><br>You are <strong style="color:#26A69A">BUYING</strong> — so target goes <strong>ABOVE your entry</strong>.<br>Your risk = <strong>${risk} pts</strong>. Aim for at least <strong style="color:#26A69A">${min2R}</strong> (2× your risk).<br><em>Rule: target must be at least 2× your risk to be worth the trade.</em>`
-        : `Take profit = where you cash out your winnings.<br><br>You are <strong style="color:#EF5350">SELLING SHORT</strong> — so target goes <strong>BELOW your entry</strong>.<br>Your risk = <strong>${risk} pts</strong>. Aim for at least <strong style="color:#26A69A">${min2R}</strong> (2× your risk).<br><em>Rule: target must be at least 2× your risk to be worth the trade.</em>`;
+        ? `Take profit = where you exit with your winnings.<br><br>You're <strong style="color:#26A69A">BUYING</strong> — tap <strong>ABOVE</strong> your entry (pink line).<br>Your risk = <strong>${risk} pts</strong>. Tap at least <strong style="color:#26A69A">${min2R}</strong> to get 2× your risk back.`
+        : `Take profit = where you exit with your winnings.<br><br>You're <strong style="color:#EF5350">SELLING SHORT</strong> — tap <strong>BELOW</strong> your entry (pink line).<br>Your risk = <strong>${risk} pts</strong>. Tap at least <strong style="color:#26A69A">${min2R}</strong> to get 2× your risk back.`;
     },
     actions(){ return `<button class="btn btn-secondary btn-sm" onclick="backToStop()">← Back to Stop</button>`; }
   },
@@ -1078,6 +1102,7 @@ function chooseTrend(t){ app.trend=t; app.entry=app.stop=app.target=null; setPha
 function resetLevels(){ app.entry=app.stop=app.target=null; setPhase('entry'); }
 function backToEntry(){ app.stop=app.target=null; setPhase('entry'); }
 function backToStop(){ app.target=null; setPhase('stop'); }
+function goBackBeginner(){ app.mode='beginner'; document.getElementById('hdrMode').textContent='🌸 Beginner'; app.entry=app.stop=app.target=null; setPhase('bq_trend'); }
 
 // ── BEGINNER REVEAL ──────────────────────────
 function begReveal(decision){
