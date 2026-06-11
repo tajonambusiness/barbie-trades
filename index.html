@@ -2338,20 +2338,16 @@ function paperUnrealizedPnl(){
 function paperBuy(){
   if(app.paperPos)return;
   const price=paperCurrentPrice(); if(!price)return;
-  const def=instrMeta(app.instrument).stopPresets[1];
-  const stop=+(price-def).toFixed(2), target=+(price+def*2).toFixed(2);
-  app.paperPos={dir:'long',entry:price,entryIdx:app.revealIdx,stop,target};
-  app.entry=price; app.stop=stop; app.target=target;
+  app.paperPos={dir:'long',entry:price,entryIdx:app.revealIdx,stop:null,target:null};
+  app.entry=price; app.stop=null; app.target=null;
   drawChart(HISTORY+1+app.revealIdx);
   renderPaperPanel();
 }
 function paperSell(){
   if(app.paperPos)return;
   const price=paperCurrentPrice(); if(!price)return;
-  const def=instrMeta(app.instrument).stopPresets[1];
-  const stop=+(price+def).toFixed(2), target=+(price-def*2).toFixed(2);
-  app.paperPos={dir:'short',entry:price,entryIdx:app.revealIdx,stop,target};
-  app.entry=price; app.stop=stop; app.target=target;
+  app.paperPos={dir:'short',entry:price,entryIdx:app.revealIdx,stop:null,target:null};
+  app.entry=price; app.stop=null; app.target=null;
   drawChart(HISTORY+1+app.revealIdx);
   renderPaperPanel();
 }
@@ -2480,9 +2476,13 @@ function renderPaperPanel(){
       ? `<div style="display:flex;gap:8px;margin-bottom:6px;">
            <button class="btn-paper-exit" onclick="paperExit()">🚪 Exit Trade Now</button>
          </div>
-         <div style="font-size:11px;color:#aaa;margin-bottom:6px;padding:6px 8px;background:rgba(255,255,255,0.04);border-radius:6px;line-height:1.5;">
-           Drag the <span style="color:#EF5350;font-weight:700;">STOP</span> and <span style="color:#26A69A;font-weight:700;">TARGET</span> lines on the chart to adjust your levels.
-           <br>Or quick-set: <span style="color:#888;">Stop →</span> ${stopBtns} &nbsp;<span style="color:#888;">Target →</span> ${tgtBtns}
+         <div style="margin-bottom:4px;">
+           <div style="font-size:11px;color:#EF5350;font-weight:700;margin-bottom:3px;">📍 Stop Loss — tap to place, then drag on chart:</div>
+           <div style="display:flex;gap:4px;">${stopBtns}</div>
+         </div>
+         <div style="margin-bottom:8px;">
+           <div style="font-size:11px;color:#26A69A;font-weight:700;margin-bottom:3px;">🎯 Take Profit — tap to place, then drag on chart:</div>
+           <div style="display:flex;gap:4px;">${tgtBtns}</div>
          </div>`
       : `<div style="display:flex;gap:8px;margin-bottom:8px;">
            <button class="btn-paper-long" onclick="paperBuy()">📈 LONG</button>
