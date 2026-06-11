@@ -2338,16 +2338,24 @@ function paperUnrealizedPnl(){
 function paperBuy(){
   if(app.paperPos)return;
   const price=paperCurrentPrice(); if(!price)return;
-  app.paperPos={dir:'long',entry:price,entryIdx:app.revealIdx,stop:null,target:null};
-  app.entry=price; app.stop=null; app.target=null;
+  const def=instrMeta(app.instrument).stopPresets[1];
+  const stop=+(price-def).toFixed(2), target=+(price+def*2).toFixed(2);
+  app.paperPos={dir:'long',entry:price,entryIdx:app.revealIdx,stop,target};
+  app.entry=price; app.stop=stop; app.target=target;
+  // Auto-pause so user can drag lines before candles move
+  app.paperPaused=true; clearInterval(app.paperTimer);
   drawChart(HISTORY+1+app.revealIdx);
   renderPaperPanel();
 }
 function paperSell(){
   if(app.paperPos)return;
   const price=paperCurrentPrice(); if(!price)return;
-  app.paperPos={dir:'short',entry:price,entryIdx:app.revealIdx,stop:null,target:null};
-  app.entry=price; app.stop=null; app.target=null;
+  const def=instrMeta(app.instrument).stopPresets[1];
+  const stop=+(price+def).toFixed(2), target=+(price-def*2).toFixed(2);
+  app.paperPos={dir:'short',entry:price,entryIdx:app.revealIdx,stop,target};
+  app.entry=price; app.stop=stop; app.target=target;
+  // Auto-pause so user can drag lines before candles move
+  app.paperPaused=true; clearInterval(app.paperTimer);
   drawChart(HISTORY+1+app.revealIdx);
   renderPaperPanel();
 }
@@ -2473,15 +2481,18 @@ function renderPaperPanel(){
   document.getElementById('actionRow').innerHTML=`
     ${posHtml}
     ${app.paperPos
-      ? `<div style="display:flex;gap:8px;margin-bottom:6px;">
-           <button class="btn-paper-exit" onclick="paperExit()">🚪 Exit Trade Now</button>
+      ? `${app.paperPaused?`<div style="background:rgba(212,175,55,0.12);border:1px solid rgba(212,175,55,0.4);border-radius:8px;padding:7px 10px;margin-bottom:8px;font-size:12px;color:#F9E07A;font-weight:700;">
+           ⏸ Paused — drag the red &amp; green lines to your levels, then press ▶ Play
+         </div>`:''}
+         <div style="display:flex;gap:8px;margin-bottom:6px;">
+           <button class="btn-paper-exit" onclick="paperExit()">🚪 Exit</button>
          </div>
          <div style="margin-bottom:4px;">
-           <div style="font-size:11px;color:#EF5350;font-weight:700;margin-bottom:3px;">📍 Stop Loss — tap to place, then drag on chart:</div>
+           <div style="font-size:11px;color:#EF5350;font-weight:700;margin-bottom:3px;">📍 Stop Loss — drag red line or quick-set:</div>
            <div style="display:flex;gap:4px;">${stopBtns}</div>
          </div>
          <div style="margin-bottom:8px;">
-           <div style="font-size:11px;color:#26A69A;font-weight:700;margin-bottom:3px;">🎯 Take Profit — tap to place, then drag on chart:</div>
+           <div style="font-size:11px;color:#26A69A;font-weight:700;margin-bottom:3px;">🎯 Take Profit — drag green line or quick-set:</div>
            <div style="display:flex;gap:4px;">${tgtBtns}</div>
          </div>`
       : `<div style="display:flex;gap:8px;margin-bottom:8px;">
