@@ -747,7 +747,7 @@ const app = {
   viewShift:0, viewZoom:1, viewOffsetY:0,
   showStructure:false, showZones:false, showCross:false,
   emaConfig:[{period:20,color:'#E91E8C',show:true},{period:50,color:'#F9A825',show:true}],
-  paperBalance:10000, paperPos:null, paperTrades:[], paperTimer:null, paperPaused:false, paperSpeed:1200, paperContract:'micro',
+  paperBalance:10000, paperPos:null, paperTrades:[], paperTimer:null, paperPaused:false, paperSpeed:1200, paperContract:'micro', draggingLine:null,
   _crossX:null, _crossY:null,
   gwAnswers:{},
 };
@@ -988,6 +988,7 @@ function drawChart(visCount, canvasId='chartCanvas'){
   const vOff=app.viewOffsetY||0;
   const minP=rawMin+vOff, maxP=rawMax+vOff;
   app._pricePerPx=(rawMax-rawMin)/Math.max(1,H-PAD.top-PAD.bottom);
+  app._minP=minP; app._maxP=maxP; // cache for drag hit-testing
   const candleW=Math.max((W-PAD.left-PAD.right)/slice.length,2);
   const bodyW=Math.max(candleW*0.65,1.5);
 
@@ -1087,8 +1088,8 @@ function drawChart(visCount, canvasId='chartCanvas'){
 
   // Trade lines
   if(app.entry!==null)drawHLine(ctx,app.entry,'#E91E8C','ENTRY',minP,maxP,W,H);
-  if(app.stop!==null) drawHLine(ctx,app.stop,'#EF5350','STOP',minP,maxP,W,H);
-  if(app.target!==null)drawHLine(ctx,app.target,'#26A69A','TARGET',minP,maxP,W,H);
+  if(app.stop!==null) drawDragLine(ctx,app.stop,'#EF5350','STOP',minP,maxP,W,H,app.mode==='paper',app.draggingLine==='stop');
+  if(app.target!==null)drawDragLine(ctx,app.target,'#26A69A','TARGET',minP,maxP,W,H,app.mode==='paper',app.draggingLine==='target');
 
   // 2:1 minimum target guide — shown during target phase before user taps
   if(app.phase==='target' && app.entry!==null && app.stop!==null && app.target===null){
@@ -1194,9 +1195,55 @@ function drawHLine(ctx,price,color,label,minP,maxP,W,H){
   ctx.strokeStyle=color; ctx.lineWidth=1.4; ctx.setLineDash([6,3]);
   ctx.beginPath();ctx.moveTo(PAD.left,y);ctx.lineTo(W-PAD.right,y);ctx.stroke();ctx.setLineDash([]);
   const lW=76,lH=18,lX=W-PAD.right-lW-2;
-  ctx.fillStyle=color; ctx.roundRect(lX,y-lH/2,lW,lH,5); ctx.fill();
+  ctx.fillStyle=color; ctx.beginPath(); ctx.roundRect(lX,y-lH/2,lW,lH,5); ctx.fill();
   ctx.fillStyle='white'; ctx.font='bold 10px Nunito,sans-serif'; ctx.textAlign='center';
   ctx.fillText(`${label} ${price.toFixed(0)}`,lX+lW/2,y+4);
+}
+function drawDragLine(ctx,price,color,label,minP,maxP,W,H,draggable,active){
+  const y=p2y(price,minP,maxP,H);
+  if(y<PAD.top-20||y>H-PAD.bottom+20)return;
+  // Highlight glow when actively dragging
+  if(active){
+    ctx.strokeStyle=color+'44'; ctx.lineWidth=8; ctx.setLineDash([]);
+    ctx.beginPath();ctx.moveTo(PAD.left,y);ctx.lineTo(W-PAD.right,y);ctx.stroke();
+  }
+  ctx.strokeStyle=color; ctx.lineWidth=draggable?2:1.4; ctx.setLineDash([6,3]);
+  ctx.beginPath();ctx.moveTo(PAD.left,y);ctx.lineTo(W-PAD.right,y);ctx.stroke();ctx.setLineDash([]);
+  // Badge with price
+  const dec=app.instrument==='CL=F'?2:0;
+  const prStr=price.toFixed(dec);
+  const lbl=`${label}  ${prStr}`;
+  ctx.font='bold 10px Nunito,sans-serif';
+  const lW=ctx.measureText(lbl).width+16,lH=20,lX=W-PAD.right-lW-2;
+  ctx.fillStyle=active?color+'dd':color;
+  ctx.beginPath(); ctx.roundRect(lX,y-lH/2,lW,lH,5); ctx.fill();
+  ctx.fillStyle='white'; ctx.textAlign='center';
+  ctx.fillText(lbl,lX+lW/2,y+4);
+  // Drag handle (≡ bars) on left edge — only shown in paper mode
+  if(draggable){
+    ctx.fillStyle=color;
+    ctx.fillRect(PAD.left+3,y-5,10,2);
+    ctx.fillRect(PAD.left+3,y-1,10,2);
+    ctx.fillRect(PAD.left+3,y+3,10,2);
+  }
+}
+// Returns 'stop'|'target'|null — used to detect drag hit on lines
+function getLineNearY(clientY){
+  if(!app.paperPos||!app._minP||!app._maxP)return null;
+  const canvas=document.getElementById('chartCanvas');
+  const H=canvas.height;
+  const rect=canvas.getBoundingClientRect();
+  const yPx=(clientY-rect.top)*(H/rect.height);
+  const thresh=14;
+  if(app.paperPos.stop!=null){
+    const sy=p2y(app.paperPos.stop,app._minP,app._maxP,H);
+    if(Math.abs(yPx-sy)<thresh)return 'stop';
+  }
+  if(app.paperPos.target!=null){
+    const ty=p2y(app.paperPos.target,app._minP,app._maxP,H);
+    if(Math.abs(yPx-ty)<thresh)return 'target';
+  }
+  return null;
 }
 
 // ── DRAWINGS ─────────────────────────────────
@@ -1355,11 +1402,26 @@ document.getElementById('chartCanvas').addEventListener('mouseleave',()=>{
   cv.addEventListener('mousedown',e=>{
     if(app.drawTool||['entry','stop','target'].includes(app.phase))return;
     if(!isActive())return;
+    // Check if clicking near a draggable line first
+    const line=getLineNearY(e.clientY);
+    if(line){ app.draggingLine=line; cv.style.cursor='ns-resize'; return; }
     drag=true; dragX=e.clientX; dragY=e.clientY;
     dragShift=app.viewShift; dragOffY=app.viewOffsetY||0;
     cv.style.cursor='grabbing';
   });
   window.addEventListener('mousemove',e=>{
+    // Line dragging takes priority
+    if(app.draggingLine&&app.paperPos){
+      const newPrice=yToPrice(e.clientY);
+      if(app.draggingLine==='stop'){ app.paperPos.stop=newPrice; app.stop=newPrice; }
+      else { app.paperPos.target=newPrice; app.target=newPrice; }
+      drawChart(HISTORY+1+app.revealIdx); renderPaperPanel(); return;
+    }
+    // Cursor hint when hovering near a draggable line
+    if(!drag&&!app.drawTool&&app.paperPos){
+      const near=getLineNearY(e.clientY);
+      cv.style.cursor=near?'ns-resize':'grab';
+    }
     if(!drag)return;
     const canvas=document.getElementById('chartCanvas');
     const candleW=(canvas.width-PAD.left-PAD.right)/Math.max(1,Math.round((HISTORY+1+app.revealIdx)/(app.viewZoom||1)));
@@ -1370,7 +1432,10 @@ document.getElementById('chartCanvas').addEventListener('mouseleave',()=>{
     app.viewOffsetY=Math.max(-maxOff, Math.min(maxOff, dragOffY - dyPx*(app._pricePerPx||1)));
     redraw();
   });
-  window.addEventListener('mouseup',()=>{ if(drag){drag=false; cv.style.cursor='grab';} });
+  window.addEventListener('mouseup',()=>{
+    if(app.draggingLine){ app.draggingLine=null; cv.style.cursor='grab'; return; }
+    if(drag){drag=false; cv.style.cursor='grab';}
+  });
 
   // Scroll to zoom
   cv.addEventListener('wheel',e=>{
@@ -1387,17 +1452,20 @@ document.getElementById('chartCanvas').addEventListener('mouseleave',()=>{
     app.viewShift=0; app.viewZoom=1; app.viewOffsetY=0; redraw();
   });
 
-  // Touch: single finger drag = pan H+V, two fingers = pinch zoom
+  // Touch: single finger drag = pan H+V (or drag line), two fingers = pinch zoom
   let t1=null, t2x=0, t2y=0, touchShift=0, touchOffY=0, pinchDist0=0, pinchZoom0=1;
   cv.addEventListener('touchstart',e=>{
     if(!isActive())return;
     if(e.touches.length===1){
       if(app.drawTool)return;
-      // Store plain-object snapshot — Touch objects can be recycled on iOS
-      t1={clientX:e.touches[0].clientX, clientY:e.touches[0].clientY};
+      const ty=e.touches[0].clientY;
+      // Check if touching near a draggable line
+      const line=getLineNearY(ty);
+      if(line){ app.draggingLine=line; t1=null; return; }
+      t1={clientX:e.touches[0].clientX, clientY:ty};
       touchShift=app.viewShift; touchOffY=app.viewOffsetY||0; t2x=0; t2y=0;
     } else if(e.touches.length===2){
-      t1=null;
+      app.draggingLine=null; t1=null;
       const dx=e.touches[0].clientX-e.touches[1].clientX, dy=e.touches[0].clientY-e.touches[1].clientY;
       t2x=e.touches[0].clientX; t2y=e.touches[0].clientY;
       pinchDist0=Math.sqrt(dx*dx+dy*dy); pinchZoom0=app.viewZoom||1;
@@ -1406,6 +1474,13 @@ document.getElementById('chartCanvas').addEventListener('mouseleave',()=>{
   cv.addEventListener('touchmove',e=>{
     if(!isActive())return;
     e.preventDefault();
+    // Line dragging
+    if(app.draggingLine&&app.paperPos&&e.touches.length===1){
+      const newPrice=yToPrice(e.touches[0].clientY);
+      if(app.draggingLine==='stop'){ app.paperPos.stop=newPrice; app.stop=newPrice; }
+      else { app.paperPos.target=newPrice; app.target=newPrice; }
+      drawChart(HISTORY+1+app.revealIdx); renderPaperPanel(); return;
+    }
     if(e.touches.length===1&&t1&&!app.drawTool){
       const canvas=document.getElementById('chartCanvas');
       const candleW=(canvas.width-PAD.left-PAD.right)/Math.max(1,Math.round((HISTORY+1+app.revealIdx)/(app.viewZoom||1)));
@@ -1422,7 +1497,7 @@ document.getElementById('chartCanvas').addEventListener('mouseleave',()=>{
       redraw();
     }
   },{passive:false});
-  cv.addEventListener('touchend',()=>{ t1=null; });
+  cv.addEventListener('touchend',()=>{ app.draggingLine=null; t1=null; });
 })();
 
 // ── DRAWING CONTROLS ─────────────────────────
@@ -2211,6 +2286,7 @@ function loadPaperWindow(){
   app.winStart=Math.floor(Math.random()*max);
   app.entry=app.stop=app.target=null; app.revealIdx=0;
   app.phase='paper'; // keeps isActive()=true so pan/zoom/drag work
+  app.draggingLine=null;
   app.drawings=[]; app.drawFirstPt=null; app.viewShift=0; app.viewZoom=1; app.viewOffsetY=0;
   drawChart(HISTORY+1);
   renderPaperPanel();
@@ -2261,16 +2337,20 @@ function paperUnrealizedPnl(){
 function paperBuy(){
   if(app.paperPos)return;
   const price=paperCurrentPrice(); if(!price)return;
-  app.paperPos={dir:'long',entry:price,entryIdx:app.revealIdx,stop:null,target:null};
-  app.entry=price;
+  const def=instrMeta(app.instrument).stopPresets[1];
+  const stop=+(price-def).toFixed(2), target=+(price+def*2).toFixed(2);
+  app.paperPos={dir:'long',entry:price,entryIdx:app.revealIdx,stop,target};
+  app.entry=price; app.stop=stop; app.target=target;
   drawChart(HISTORY+1+app.revealIdx);
   renderPaperPanel();
 }
 function paperSell(){
   if(app.paperPos)return;
   const price=paperCurrentPrice(); if(!price)return;
-  app.paperPos={dir:'short',entry:price,entryIdx:app.revealIdx,stop:null,target:null};
-  app.entry=price;
+  const def=instrMeta(app.instrument).stopPresets[1];
+  const stop=+(price+def).toFixed(2), target=+(price-def*2).toFixed(2);
+  app.paperPos={dir:'short',entry:price,entryIdx:app.revealIdx,stop,target};
+  app.entry=price; app.stop=stop; app.target=target;
   drawChart(HISTORY+1+app.revealIdx);
   renderPaperPanel();
 }
@@ -2399,13 +2479,9 @@ function renderPaperPanel(){
       ? `<div style="display:flex;gap:8px;margin-bottom:6px;">
            <button class="btn-paper-exit" onclick="paperExit()">🚪 Exit Trade Now</button>
          </div>
-         <div style="margin-bottom:4px;">
-           <div style="font-size:11px;color:#aaa;margin-bottom:3px;">📍 Stop Loss Distance:</div>
-           <div style="display:flex;gap:4px;">${stopBtns}</div>
-         </div>
-         <div style="margin-bottom:8px;">
-           <div style="font-size:11px;color:#aaa;margin-bottom:3px;">🎯 Take Profit Distance:</div>
-           <div style="display:flex;gap:4px;">${tgtBtns}</div>
+         <div style="font-size:11px;color:#aaa;margin-bottom:6px;padding:6px 8px;background:rgba(255,255,255,0.04);border-radius:6px;line-height:1.5;">
+           Drag the <span style="color:#EF5350;font-weight:700;">STOP</span> and <span style="color:#26A69A;font-weight:700;">TARGET</span> lines on the chart to adjust your levels.
+           <br>Or quick-set: <span style="color:#888;">Stop →</span> ${stopBtns} &nbsp;<span style="color:#888;">Target →</span> ${tgtBtns}
          </div>`
       : `<div style="display:flex;gap:8px;margin-bottom:8px;">
            <button class="btn-paper-long" onclick="paperBuy()">📈 LONG</button>
