@@ -109,6 +109,25 @@ body {
 .btn-dn:hover  { transform: translateY(-2px); }
 .btn-neu { background: linear-gradient(135deg,#4A148C,#9C27B0); color: white; box-shadow: 0 4px 16px rgba(106,27,154,.4); }
 .btn-neu:hover { transform: translateY(-2px); }
+/* ── PAPER TRADING ── */
+.paper-hud { background:rgba(13,0,16,0.95); border:1.5px solid rgba(212,175,55,0.4); border-radius:16px; padding:12px 16px; margin-bottom:8px; display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; }
+.paper-bal { font-size:13px; color:#888; }
+.paper-bal span { font-size:18px; font-weight:900; background:linear-gradient(135deg,#D4AF37,#F9E07A); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+.paper-pnl-pos { font-size:22px; font-weight:900; color:#26A69A; }
+.paper-pnl-neg { font-size:22px; font-weight:900; color:#EF5350; }
+.paper-pnl-zero { font-size:22px; font-weight:900; color:#888; }
+.paper-pos-box { background:rgba(255,255,255,0.04); border-radius:12px; padding:10px 14px; border:1px solid rgba(212,175,55,0.2); font-size:12px; color:#FCE4EC; line-height:1.9; width:100%; }
+.btn-paper-long  { background:linear-gradient(135deg,#00695C,#26A69A); color:white; font-size:16px; font-weight:800; padding:14px 28px; border-radius:14px; border:none; cursor:pointer; box-shadow:0 4px 20px rgba(38,166,154,0.5); flex:1; min-width:120px; transition:transform .15s; }
+.btn-paper-long:hover { transform:translateY(-2px); }
+.btn-paper-short { background:linear-gradient(135deg,#5D0000,#EF5350); color:white; font-size:16px; font-weight:800; padding:14px 28px; border-radius:14px; border:none; cursor:pointer; box-shadow:0 4px 20px rgba(239,83,80,0.5); flex:1; min-width:120px; transition:transform .15s; }
+.btn-paper-short:hover { transform:translateY(-2px); }
+.btn-paper-exit { background:linear-gradient(135deg,#D4AF37,#F9E07A); color:#1a0010; font-size:16px; font-weight:900; padding:14px 0; border-radius:14px; border:none; cursor:pointer; box-shadow:0 4px 20px rgba(212,175,55,0.5); width:100%; transition:transform .15s; }
+.btn-paper-exit:hover { transform:translateY(-2px); }
+.paper-trades-list { max-height:90px; overflow-y:auto; margin-top:8px; }
+.paper-trade-row { display:flex; justify-content:space-between; font-size:11px; padding:3px 8px; border-radius:6px; margin-bottom:2px; background:rgba(255,255,255,0.04); color:#FCE4EC; }
+.paper-speed-row { display:flex; gap:6px; align-items:center; font-size:11px; color:#888; margin-top:4px; }
+.paper-speed-btn { background:rgba(255,255,255,0.08); border:1px solid rgba(212,175,55,0.2); color:#D4AF37; border-radius:6px; padding:3px 8px; cursor:pointer; font-size:11px; }
+.paper-speed-btn.active { background:rgba(212,175,55,0.2); border-color:#D4AF37; }
 .btn-hint { background: linear-gradient(135deg, var(--gold), #F9E07A); color: #1a0010; font-weight: 900; box-shadow: 0 4px 16px rgba(212,175,55,.4); }
 .btn-hint:hover { transform: translateY(-2px); }
 
@@ -461,6 +480,12 @@ select { font-family: 'Nunito',sans-serif; font-size: 13px; font-weight: 700; ba
       <h3>Advanced</h3>
       <p>Full trade placement. No hints. Test your real skills on live NQ/ES data.</p>
     </div>
+    <div class="mode-card" id="mc-paper" onclick="selectMode('paper')" style="border-color:rgba(212,175,55,0.5);background:linear-gradient(135deg,rgba(212,175,55,0.08),rgba(233,30,140,0.08));">
+      <div class="mc-icon">💰</div>
+      <div class="mc-badge" style="background:linear-gradient(135deg,#D4AF37,#F9E07A);color:#1a0010;">Make Money</div>
+      <h3 style="background:linear-gradient(135deg,#D4AF37,#F9E07A);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Paper Trading</h3>
+      <p>Live sim — enter & exit trades whenever you want. Watch your fake account grow in real time.</p>
+    </div>
   </div>
 
   <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;align-items:center;">
@@ -686,6 +711,7 @@ const app = {
   viewShift:0, viewZoom:1, viewOffsetY:0,
   showStructure:false, showZones:false, showCross:false,
   emaConfig:[{period:20,color:'#E91E8C',show:true},{period:50,color:'#F9A825',show:true}],
+  paperBalance:10000, paperPos:null, paperTrades:[], paperTimer:null, paperPaused:false, paperSpeed:1200, paperContract:'micro',
   _crossX:null, _crossY:null,
   gwAnswers:{},
 };
@@ -2077,7 +2103,222 @@ function buildLesson(win,trendOk,isLong,rr,actual,noHit){
 }
 
 // ── NEXT TRADE ───────────────────────────────
-function nextTrade(){ document.getElementById('resultOverlay').classList.remove('show'); loadWindow(); }
+function nextTrade(){
+  document.getElementById('resultOverlay').classList.remove('show');
+  if(app.mode==='paper'){ loadPaperWindow(); return; }
+  loadWindow();
+}
+
+// ════════════════════════════════════════════
+//  PAPER TRADING MODE
+// ════════════════════════════════════════════
+function initPaperMode(){
+  const saved=localStorage.getItem('bt_paper_state');
+  if(saved){ try{ const s=JSON.parse(saved); app.paperBalance=s.balance||10000; app.paperTrades=s.trades||[]; }catch{} }
+  else { app.paperBalance=10000; app.paperTrades=[]; }
+  app.paperPos=null; app.paperPaused=false; app.paperSpeed=1200; app.paperContract='micro';
+  loadPaperWindow();
+}
+function savePaperState(){
+  localStorage.setItem('bt_paper_state',JSON.stringify({balance:app.paperBalance,trades:app.paperTrades}));
+}
+function loadPaperWindow(){
+  clearInterval(app.paperTimer);
+  const max=app.candles.length-HISTORY-REVEAL-15; if(max<1)return;
+  app.winStart=Math.floor(Math.random()*max);
+  app.entry=app.stop=app.target=null; app.revealIdx=0;
+  app.drawings=[]; app.drawFirstPt=null; app.viewShift=0; app.viewZoom=1; app.viewOffsetY=0;
+  drawChart(HISTORY+1);
+  renderPaperPanel();
+  if(!app.paperPaused) startPaperTimer();
+}
+function startPaperTimer(){
+  clearInterval(app.paperTimer);
+  app.paperTimer=setInterval(()=>{
+    if(app.paperPaused)return;
+    if(app.revealIdx>=REVEAL){
+      clearInterval(app.paperTimer);
+      if(app.paperPos){ paperForceExit(); }
+      else { setTimeout(()=>loadPaperWindow(),800); }
+      return;
+    }
+    app.revealIdx++;
+    // check auto stop/target hit
+    if(app.paperPos){
+      const c=app.candles[app.winStart+HISTORY+app.revealIdx];
+      if(c){
+        const pos=app.paperPos, isLong=pos.dir==='long';
+        if(pos.stop&&((isLong&&c.l<=pos.stop)||(!isLong&&c.h>=pos.stop))){ paperCloseAt(pos.stop,'🛑 Stop Loss'); return; }
+        if(pos.target&&((isLong&&c.h>=pos.target)||(!isLong&&c.l<=pos.target))){ paperCloseAt(pos.target,'💰 Target Hit!'); return; }
+      }
+    }
+    drawChart(HISTORY+1+app.revealIdx);
+    renderPaperPanel();
+  },app.paperSpeed);
+}
+function paperPPT(){
+  const isES=app.instrument==='ES=F';
+  return app.paperContract==='micro'?(isES?5:2):(isES?50:20);
+}
+function paperContractName(){
+  const isES=app.instrument==='ES=F';
+  return app.paperContract==='micro'?(isES?'MES':'MNQ'):(isES?'ES':'NQ');
+}
+function paperCurrentPrice(){
+  const idx=app.winStart+HISTORY+app.revealIdx;
+  return app.candles[idx]?app.candles[idx].c:null;
+}
+function paperUnrealizedPnl(){
+  if(!app.paperPos)return 0;
+  const cur=paperCurrentPrice(); if(!cur)return 0;
+  const pts=app.paperPos.dir==='long'?(cur-app.paperPos.entry):(app.paperPos.entry-cur);
+  return pts*paperPPT();
+}
+function paperBuy(){
+  if(app.paperPos)return;
+  const price=paperCurrentPrice(); if(!price)return;
+  app.paperPos={dir:'long',entry:price,entryIdx:app.revealIdx,stop:null,target:null};
+  app.entry=price;
+  drawChart(HISTORY+1+app.revealIdx);
+  renderPaperPanel();
+}
+function paperSell(){
+  if(app.paperPos)return;
+  const price=paperCurrentPrice(); if(!price)return;
+  app.paperPos={dir:'short',entry:price,entryIdx:app.revealIdx,stop:null,target:null};
+  app.entry=price;
+  drawChart(HISTORY+1+app.revealIdx);
+  renderPaperPanel();
+}
+function paperSetStop(){
+  if(!app.paperPos)return;
+  const pts=parseFloat(prompt(`Set stop loss — how many points away from entry (${app.paperPos.entry.toFixed(0)})?`));
+  if(!pts||isNaN(pts)||pts<=0)return;
+  app.paperPos.stop=app.paperPos.dir==='long'?app.paperPos.entry-pts:app.paperPos.entry+pts;
+  app.stop=app.paperPos.stop;
+  renderPaperPanel(); drawChart(HISTORY+1+app.revealIdx);
+}
+function paperSetTarget(){
+  if(!app.paperPos)return;
+  const pts=parseFloat(prompt(`Set take profit — how many points away from entry (${app.paperPos.entry.toFixed(0)})?`));
+  if(!pts||isNaN(pts)||pts<=0)return;
+  app.paperPos.target=app.paperPos.dir==='long'?app.paperPos.entry+pts:app.paperPos.entry-pts;
+  app.target=app.paperPos.target;
+  renderPaperPanel(); drawChart(HISTORY+1+app.revealIdx);
+}
+function paperCloseAt(exitPrice,reason){
+  if(!app.paperPos)return;
+  const pos=app.paperPos;
+  const pts=pos.dir==='long'?(exitPrice-pos.entry):(pos.entry-exitPrice);
+  const pnl=pts*paperPPT();
+  app.paperBalance+=pnl;
+  app.paperTrades.unshift({dir:pos.dir,entry:pos.entry,exit:exitPrice,pts:+pts.toFixed(1),pnl:+pnl.toFixed(2),reason,contract:paperContractName()});
+  if(app.paperTrades.length>50)app.paperTrades=app.paperTrades.slice(0,50);
+  savePaperState();
+  const was=app.paperPos; app.paperPos=null;
+  app.entry=null; app.stop=null; app.target=null;
+  showPaperResult(pnl,pts,reason,was);
+}
+function paperForceExit(){ paperCloseAt(paperCurrentPrice(),'⏰ Window Ended'); }
+function paperExit(){ paperCloseAt(paperCurrentPrice(),'🚪 Manual Exit'); }
+function showPaperResult(pnl,pts,reason,pos){
+  clearInterval(app.paperTimer);
+  drawChart(HISTORY+1+app.revealIdx);
+  const win=pnl>0;
+  const el=document.getElementById('actionRow');
+  el.innerHTML=`
+    <div style="background:${win?'rgba(38,166,154,0.15)':'rgba(239,83,80,0.12)'};border:2px solid ${win?'#26A69A':'#EF5350'};border-radius:16px;padding:16px;text-align:center;width:100%;margin-bottom:10px;">
+      <div style="font-size:28px;margin-bottom:4px;">${win?'💰':'📉'}</div>
+      <div style="font-size:22px;font-weight:900;color:${win?'#26A69A':'#EF5350'};">${pnl>=0?'+':''}$${pnl.toFixed(2)}</div>
+      <div style="font-size:13px;color:#888;margin:4px 0;">${reason} · ${pts>=0?'+':''}${pts.toFixed(1)} pts · ${pos.dir.toUpperCase()}</div>
+      <div style="font-size:14px;font-weight:700;color:#F9E07A;">Balance: $${app.paperBalance.toFixed(2)}</div>
+    </div>
+    <button class="btn-paper-long" onclick="loadPaperWindow()" style="font-size:14px;padding:12px;">▶ Next Candles</button>`;
+  document.getElementById('stepDots').innerHTML='';
+  document.getElementById('iIcon').textContent=win?'💰':'📉';
+  document.getElementById('iTitle').textContent=win?'Trade Closed — Profit!':'Trade Closed — Loss';
+  document.getElementById('iDesc').innerHTML=`${win?'Nice exit! 💕':'Keep studying the setups. Every loss is a lesson.'} <br><small style="color:#888;">Trades this session: ${app.paperTrades.length}</small>`;
+}
+function setPaperSpeed(ms){
+  app.paperSpeed=ms;
+  clearInterval(app.paperTimer);
+  if(!app.paperPaused) startPaperTimer();
+  document.querySelectorAll('.paper-speed-btn').forEach(b=>b.classList.remove('active'));
+  const map={500:'s05',1200:'s12',2500:'s25'};
+  const id=map[ms]; if(id) document.getElementById(id)?.classList.add('active');
+}
+function togglePaperPause(){
+  app.paperPaused=!app.paperPaused;
+  if(!app.paperPaused) startPaperTimer();
+  const btn=document.getElementById('paperPauseBtn');
+  if(btn) btn.textContent=app.paperPaused?'▶ Play':'⏸ Pause';
+}
+function paperResetAccount(){
+  if(!confirm('Reset your paper trading account to $10,000?'))return;
+  app.paperBalance=10000; app.paperTrades=[];
+  savePaperState();
+  loadPaperWindow();
+}
+function renderPaperPanel(){
+  const isES=app.instrument==='ES=F';
+  const microName=paperContractName();
+  const ppt=paperPPT();
+  const pnl=app.paperUnrealizedPnl?app.paperUnrealizedPnl():paperUnrealizedPnl();
+  const pnlCls=pnl>0?'paper-pnl-pos':pnl<0?'paper-pnl-neg':'paper-pnl-zero';
+  const pnlStr=(pnl>=0?'+':'')+'$'+pnl.toFixed(2);
+  const sessionPnl=app.paperTrades.slice(0,100).reduce((sum,t)=>sum+t.pnl,0);
+  const sessionStr=(sessionPnl>=0?'+':'')+'$'+sessionPnl.toFixed(2);
+
+  document.getElementById('stepDots').innerHTML='';
+  document.getElementById('iIcon').textContent='💰';
+  document.getElementById('iTitle').textContent='Paper Trading — '+microName;
+  document.getElementById('iDesc').innerHTML=`Balance: <strong style="color:#F9E07A;">$${app.paperBalance.toFixed(2)}</strong> &nbsp;|&nbsp; All-time P&L: <strong style="color:${sessionPnl>=0?'#26A69A':'#EF5350'}">${sessionStr}</strong>`;
+
+  let posHtml='';
+  if(app.paperPos){
+    const cur=paperCurrentPrice()||app.paperPos.entry;
+    const uPts=app.paperPos.dir==='long'?(cur-app.paperPos.entry):(app.paperPos.entry-cur);
+    const uPnl=uPts*ppt;
+    posHtml=`<div class="paper-pos-box">
+      <strong style="color:${app.paperPos.dir==='long'?'#26A69A':'#EF5350'}">${app.paperPos.dir==='long'?'📈 LONG':'📉 SHORT'}</strong> &nbsp;·&nbsp; Entry: <strong>${app.paperPos.entry.toFixed(0)}</strong> &nbsp;·&nbsp; Now: <strong>${cur.toFixed(0)}</strong><br>
+      Unrealized P&L: <strong class="${uPnl>=0?'paper-pnl-pos':'paper-pnl-neg'}" style="font-size:16px;">${uPnl>=0?'+':''}$${uPnl.toFixed(2)}</strong> (${uPts>=0?'+':''}${uPts.toFixed(1)} pts)<br>
+      ${app.paperPos.stop?`Stop: <span style="color:#EF5350">${app.paperPos.stop.toFixed(0)}</span> &nbsp;`:'<span style="color:#888">No stop set</span> &nbsp;'}
+      ${app.paperPos.target?`Target: <span style="color:#26A69A">${app.paperPos.target.toFixed(0)}</span>`:'<span style="color:#888">No target set</span>'}
+    </div>`;
+  }
+
+  const recentTrades=app.paperTrades.slice(0,5).map(t=>`
+    <div class="paper-trade-row">
+      <span style="color:${t.dir==='long'?'#26A69A':'#EF5350'}">${t.dir==='long'?'▲':'▼'} ${t.contract}</span>
+      <span>${t.entry.toFixed(0)} → ${t.exit.toFixed(0)}</span>
+      <span style="color:${t.pnl>=0?'#26A69A':'#EF5350'};font-weight:700;">${t.pnl>=0?'+':''}$${t.pnl.toFixed(2)}</span>
+      <span style="color:#666;font-size:10px;">${t.reason}</span>
+    </div>`).join('');
+
+  document.getElementById('actionRow').innerHTML=`
+    ${posHtml}
+    ${app.paperPos
+      ? `<div style="display:flex;gap:8px;margin-bottom:8px;">
+           <button class="btn-paper-exit" onclick="paperExit()">🚪 Exit Trade Now</button>
+         </div>
+         <div style="display:flex;gap:8px;margin-bottom:8px;">
+           <button class="paper-speed-btn" onclick="paperSetStop()" style="flex:1;padding:8px;">📍 Set Stop</button>
+           <button class="paper-speed-btn" onclick="paperSetTarget()" style="flex:1;padding:8px;">🎯 Set Target</button>
+         </div>`
+      : `<div style="display:flex;gap:8px;margin-bottom:8px;">
+           <button class="btn-paper-long" onclick="paperBuy()">📈 LONG</button>
+           <button class="btn-paper-short" onclick="paperSell()">📉 SHORT</button>
+         </div>`}
+    <div class="paper-speed-row">
+      <span>Speed:</span>
+      <button class="paper-speed-btn" id="s05" onclick="setPaperSpeed(500)">Fast</button>
+      <button class="paper-speed-btn active" id="s12" onclick="setPaperSpeed(1200)">Normal</button>
+      <button class="paper-speed-btn" id="s25" onclick="setPaperSpeed(2500)">Slow</button>
+      <button class="paper-speed-btn" id="paperPauseBtn" onclick="togglePaperPause()" style="margin-left:6px;">${app.paperPaused?'▶ Play':'⏸ Pause'}</button>
+      <button class="paper-speed-btn" onclick="paperResetAccount()" style="margin-left:auto;color:#EF5350;">🔄 Reset $</button>
+    </div>
+    ${recentTrades?`<div class="paper-trades-list">${recentTrades}</div>`:''}`;
+}
 
 function startReplay(){
   document.getElementById('resultOverlay').classList.remove('show');
@@ -2420,7 +2661,7 @@ async function startTraining(){
   app.sWins=app.sLosses=app.sStreak=0;
   ['sWins','sLosses','sStreak'].forEach(id=>document.getElementById(id).textContent='0');
   document.getElementById('hdrBadge').textContent=instr.replace('=F','');
-  const modeLabels={beginner:'🌸 Beginner',guided:'🎓 Guided',intermediate:'💪 Intermediate',advanced:'⚡ Advanced'};
+  const modeLabels={beginner:'🌸 Beginner',guided:'🎓 Guided',intermediate:'💪 Intermediate',advanced:'⚡ Advanced',paper:'💰 Paper Trade'};
   document.getElementById('hdrMode').textContent=modeLabels[app.mode]||app.mode;
   showScreen('training');
   renderEmaToggles();
@@ -2454,7 +2695,7 @@ async function startTraining(){
       document.getElementById('hdrBadge').style.background='';
       document.getElementById('hdrBadge').textContent=instr.replace('=F','');
     }
-    loadWindow();
+    if(app.mode==='paper'){ initPaperMode(); } else { loadWindow(); }
   }
   catch(e){
     document.getElementById('iIcon').textContent='😢';
