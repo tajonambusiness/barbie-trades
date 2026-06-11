@@ -1227,7 +1227,7 @@ function drawDragLine(ctx,price,color,label,minP,maxP,W,H,draggable,active){
     ctx.fillRect(PAD.left+3,y+3,10,2);
   }
 }
-// Returns 'stop'|'target'|null — used to detect drag hit on lines
+// Returns 'stop'|'target'|null — returns the CLOSER line when both are within threshold
 function getLineNearY(clientY){
   if(!app.paperPos||!app._minP||!app._maxP)return null;
   const canvas=document.getElementById('chartCanvas');
@@ -1235,15 +1235,16 @@ function getLineNearY(clientY){
   const rect=canvas.getBoundingClientRect();
   const yPx=(clientY-rect.top)*(H/rect.height);
   const thresh=14;
+  let best=null, bestDist=thresh;
   if(app.paperPos.stop!=null){
-    const sy=p2y(app.paperPos.stop,app._minP,app._maxP,H);
-    if(Math.abs(yPx-sy)<thresh)return 'stop';
+    const d=Math.abs(yPx-p2y(app.paperPos.stop,app._minP,app._maxP,H));
+    if(d<bestDist){bestDist=d;best='stop';}
   }
   if(app.paperPos.target!=null){
-    const ty=p2y(app.paperPos.target,app._minP,app._maxP,H);
-    if(Math.abs(yPx-ty)<thresh)return 'target';
+    const d=Math.abs(yPx-p2y(app.paperPos.target,app._minP,app._maxP,H));
+    if(d<bestDist){bestDist=d;best='target';}
   }
-  return null;
+  return best;
 }
 
 // ── DRAWINGS ─────────────────────────────────
