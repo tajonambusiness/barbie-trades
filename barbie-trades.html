@@ -2401,8 +2401,12 @@ function savePaperState(){
 }
 function loadPaperWindow(){
   clearInterval(app.paperTimer);
-  const max=app.candles.length-HISTORY-REVEAL-15; if(max<1)return;
-  app.winStart=Math.floor(Math.random()*max);
+  const total=app.candles.length;
+  const max=total-HISTORY-REVEAL-15; if(max<1)return;
+  // For daily candles (4yr data), only use the most recent 1 year (~252 candles) so prices feel current
+  const minStart=app.tf==='1d'?Math.max(0,total-252-HISTORY-REVEAL-15):0;
+  const pickMax=Math.max(1,max-minStart);
+  app.winStart=minStart+Math.floor(Math.random()*pickMax);
   app.entry=app.stop=app.target=null; app.revealIdx=0;
   app.phase='paper'; // keeps isActive()=true so pan/zoom/drag work
   app.draggingLine=null;
@@ -3097,7 +3101,12 @@ function renderStats(){
 // ── START TRAINING ───────────────────────────
 async function startTraining(){
   const instr=document.getElementById('instrSelect').value;
-  const tf=document.getElementById('tfSelect').value;
+  let tf=document.getElementById('tfSelect').value;
+  // Paper mode: force 1-hour candles so prices are recent and feel like real intraday trading
+  if(app.mode==='paper' && tf==='1d'){
+    tf='1h';
+    document.getElementById('tfSelect').value='1h';
+  }
   app.instrument=instr; app.tf=tf;
   app.sWins=app.sLosses=app.sStreak=0;
   ['sWins','sLosses','sStreak'].forEach(id=>document.getElementById(id).textContent='0');
