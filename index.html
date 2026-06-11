@@ -483,6 +483,9 @@ select { font-family: 'Nunito',sans-serif; font-size: 13px; font-weight: 700; ba
     <button class="btn btn-secondary" onclick="openFvgLesson()">🌊 Fair Value Gaps</button>
     <button class="btn btn-secondary" onclick="openLiqLesson()">💧 Liquidity & Stop Hunts</button>
     <button class="btn btn-secondary" onclick="openDayRoutine()">☀️ Day Trading Routine</button>
+    <button class="btn btn-secondary" onclick="openOrderTypes()">📋 Order Types</button>
+    <button class="btn btn-secondary" onclick="openPropFirms()">💼 Prop Firms & Funding</button>
+    <button class="btn btn-secondary" onclick="openPreChecklist()">✅ Pre-Trade Checklist</button>
     <button class="btn btn-secondary" onclick="goStats()">📊 My Journal</button>
   </div>
 
@@ -593,6 +596,7 @@ select { font-family: 'Nunito',sans-serif; font-size: 13px; font-weight: 700; ba
     <div class="lesson-box"><h4>💡 Lesson</h4><p id="rLesson"></p></div>
     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
       <button class="btn btn-primary" onclick="nextTrade()">✨ Next Trade</button>
+      <button class="btn btn-secondary" onclick="startReplay()">🔄 Replay</button>
       <button class="btn btn-secondary" onclick="goStats()">📊 Stats</button>
     </div>
   </div>
@@ -1477,6 +1481,29 @@ function openLiqLesson(){ document.getElementById('liqLesson').style.display='bl
 function closeLiqLesson(){ document.getElementById('liqLesson').style.display='none'; }
 function openDayRoutine(){ document.getElementById('dayRoutine').style.display='block'; }
 function closeDayRoutine(){ document.getElementById('dayRoutine').style.display='none'; }
+function openOrderTypes(){ document.getElementById('orderTypes').style.display='block'; }
+function closeOrderTypes(){ document.getElementById('orderTypes').style.display='none'; }
+function openPropFirms(){ document.getElementById('propFirms').style.display='block'; }
+function closePropFirms(){ document.getElementById('propFirms').style.display='none'; }
+function openPreChecklist(){ document.getElementById('preChecklist').style.display='block'; resetChecklist(); }
+function closePreChecklist(){ document.getElementById('preChecklist').style.display='none'; }
+function resetChecklist(){
+  document.querySelectorAll('.ptc-check').forEach(cb=>cb.checked=false);
+  updateChecklistStatus();
+}
+function updateChecklistStatus(){
+  const boxes=document.querySelectorAll('.ptc-check');
+  const required=document.querySelectorAll('.ptc-check[data-req="1"]');
+  const checked=[...boxes].filter(b=>b.checked).length;
+  const reqChecked=[...required].filter(b=>b.checked).length;
+  const total=boxes.length, reqTotal=required.length;
+  const el=document.getElementById('checklistStatus');
+  if(reqChecked===reqTotal){
+    el.innerHTML=`<div style="background:rgba(38,166,154,0.15);border:2px solid #26A69A;border-radius:12px;padding:14px;text-align:center;"><div style="font-size:22px;margin-bottom:4px;">✅ GO — Take the Trade!</div><div style="font-size:13px;color:#80CBC4;">All required boxes checked (${checked}/${total} total). You're ready.</div></div>`;
+  } else {
+    el.innerHTML=`<div style="background:rgba(239,83,80,0.1);border:2px solid rgba(239,83,80,0.4);border-radius:12px;padding:14px;text-align:center;"><div style="font-size:18px;margin-bottom:4px;">🛑 NO GO — Wait</div><div style="font-size:13px;color:#EF9A9A;">${reqTotal-reqChecked} required item${reqTotal-reqChecked>1?'s':''} unchecked. Fix before entering.</div></div>`;
+  }
+}
 function openPosCalc(){
   document.getElementById('posCalc').classList.add('show');
   // Restore saved values
@@ -2051,6 +2078,57 @@ function buildLesson(win,trendOk,isLong,rr,actual,noHit){
 
 // ── NEXT TRADE ───────────────────────────────
 function nextTrade(){ document.getElementById('resultOverlay').classList.remove('show'); loadWindow(); }
+
+function startReplay(){
+  document.getElementById('resultOverlay').classList.remove('show');
+  app.revealIdx=0;
+  app.phase='replay';
+  app.viewShift=0; app.viewZoom=1; app.viewOffsetY=0;
+  renderReplayUI();
+  drawChart(HISTORY+1);
+}
+function renderReplayUI(){
+  const isLong=app.entry&&app.stop?(app.entry>app.stop):true;
+  const total=REVEAL;
+  const cur=app.revealIdx;
+  // calculate current P&L vs entry
+  let plHtml='';
+  if(app.entry&&cur>0){
+    const c=app.candles[app.winStart+HISTORY+cur];
+    if(c){
+      const pts=isLong?(c.c-app.entry):(app.entry-c.c);
+      const color=pts>=0?'#26A69A':'#EF5350';
+      const sign=pts>=0?'+':'';
+      plHtml=`<span style="color:${color};font-weight:800;font-size:14px;">${sign}${pts.toFixed(0)} pts unrealized</span>`;
+    }
+  }
+  document.getElementById('stepDots').innerHTML='';
+  document.getElementById('iIcon').textContent='🔄';
+  document.getElementById('iTitle').textContent=`Replay — Candle ${cur} of ${total}`;
+  document.getElementById('iDesc').innerHTML=cur===0?'Step through candle by candle to see exactly how the trade played out.':(plHtml||'Watch how price moves from your entry...');
+  document.getElementById('actionRow').innerHTML=`
+    <button class="btn btn-secondary btn-sm" onclick="replayPrev()" ${cur===0?'disabled':''}>← Prev</button>
+    <button class="btn btn-primary" onclick="replayNext()">${cur>=total?'🏁 Done':'Next Candle →'}</button>
+    <button class="btn btn-secondary btn-sm" onclick="replayEnd()">Skip to End ⏭</button>
+    <button class="btn btn-secondary btn-sm" onclick="nextTrade()" style="margin-top:4px;">✨ New Trade</button>`;
+}
+function replayNext(){
+  if(app.revealIdx>=REVEAL){ nextTrade(); return; }
+  app.revealIdx++;
+  drawChart(HISTORY+1+app.revealIdx);
+  renderReplayUI();
+}
+function replayPrev(){
+  if(app.revealIdx<=0)return;
+  app.revealIdx--;
+  drawChart(HISTORY+1+app.revealIdx);
+  renderReplayUI();
+}
+function replayEnd(){
+  app.revealIdx=REVEAL;
+  drawChart(HISTORY+1+REVEAL);
+  renderReplayUI();
+}
 
 function loadWindow(){
   const max=app.candles.length-HISTORY-REVEAL-15; if(max<1)return;
@@ -3711,6 +3789,195 @@ loadProfile();
 
     <div style="text-align:center;">
       <button class="btn btn-primary" onclick="closeDayRoutine()">I'm Ready to Build My Routine! 💕</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ ORDER TYPES ══════════════ -->
+<div id="orderTypes" style="display:none;position:fixed;inset:0;z-index:400;backdrop-filter:blur(4px);background:rgba(13,0,16,0.85);overflow-y:auto;padding:20px;">
+  <div style="max-width:620px;margin:0 auto;background:rgba(26,0,34,0.97);border:1.5px solid rgba(212,175,55,0.4);border-radius:20px;padding:28px;color:#FCE4EC;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+      <div style="font-family:'Pacifico',cursive;font-size:22px;background:linear-gradient(135deg,var(--gold),#F9E07A);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">📋 Order Types</div>
+      <button onclick="closeOrderTypes()" style="background:none;border:1.5px solid rgba(212,175,55,0.4);color:#D4AF37;border-radius:8px;padding:4px 12px;cursor:pointer;">✕ Close</button>
+    </div>
+
+    <div style="background:rgba(212,175,55,0.1);border-radius:12px;padding:12px;margin-bottom:16px;border:1px solid rgba(212,175,55,0.3);font-size:13px;color:#F9E07A;text-align:center;">
+      💡 You know WHERE to trade — now learn HOW to actually click the buttons on your broker.
+    </div>
+
+    <div style="display:grid;gap:12px;margin-bottom:16px;">
+      <div style="background:rgba(38,166,154,0.1);border-radius:14px;padding:16px;border-left:4px solid #26A69A;">
+        <div style="font-size:15px;font-weight:800;color:#26A69A;margin-bottom:6px;">🟢 Market Order — Instant Fill</div>
+        <div style="font-size:13px;line-height:1.8;color:#FCE4EC;"><strong>What it does:</strong> Buys or sells immediately at whatever the current price is.<br><strong>When to use:</strong> When you need in RIGHT NOW and don't care about a few ticks slippage.<br><strong>Risk:</strong> In fast markets you can get filled at a worse price than expected (slippage).<br><span style="color:#80CBC4;">Example: NQ is at 20,050. You click Market Buy. You get filled at 20,051 or 20,052.</span></div>
+      </div>
+
+      <div style="background:rgba(233,30,140,0.08);border-radius:14px;padding:16px;border-left:4px solid #E91E8C;">
+        <div style="font-size:15px;font-weight:800;color:#E91E8C;margin-bottom:6px;">🎯 Limit Order — Your Price or Better</div>
+        <div style="font-size:13px;line-height:1.8;color:#FCE4EC;"><strong>What it does:</strong> Waits and only fills at your exact price (or better). Doesn't fill if price doesn't reach it.<br><strong>When to use:</strong> Entering at a specific S&D zone price. You set it and walk away.<br><strong>Risk:</strong> Might not fill if price never reaches your level — you miss the trade.<br><span style="color:#F48FB1;">Example: NQ is at 20,050. You set a Limit Buy at 20,000. It only fills if NQ drops to 20,000.</span></div>
+      </div>
+
+      <div style="background:rgba(239,83,80,0.1);border-radius:14px;padding:16px;border-left:4px solid #EF5350;">
+        <div style="font-size:15px;font-weight:800;color:#EF5350;margin-bottom:6px;">🛑 Stop Order (Stop Loss) — Protect Your Money</div>
+        <div style="font-size:13px;line-height:1.8;color:#FCE4EC;"><strong>What it does:</strong> Becomes a market order when price hits your stop level. Exits your trade automatically.<br><strong>When to use:</strong> ALWAYS set this immediately after entering any trade. It's your safety net.<br><strong>Critical rule:</strong> Set it before anything else. Never trade without a stop.<br><span style="color:#EF9A9A;">Example: You bought at 20,000. Stop at 19,950. If NQ drops to 19,950 → auto-exit, -50 pts.</span></div>
+      </div>
+
+      <div style="background:rgba(249,168,37,0.08);border-radius:14px;padding:16px;border-left:4px solid #F9A825;">
+        <div style="font-size:15px;font-weight:800;color:#F9A825;margin-bottom:6px;">💰 Limit Order (Take Profit) — Lock in Gains</div>
+        <div style="font-size:13px;line-height:1.8;color:#FCE4EC;"><strong>What it does:</strong> Automatically exits your trade when price reaches your target. You collect your profit.<br><strong>When to use:</strong> Set this at the same time as your stop loss, right after entering.<br><strong>The combo:</strong> Enter → set Stop Loss + Take Profit at the same time. Then let it run.<br><span style="color:#FFE082;">Example: Bought at 20,000. Take profit at 20,100. When NQ hits 20,100 → auto-exit, +100 pts.</span></div>
+      </div>
+
+      <div style="background:rgba(156,39,176,0.1);border-radius:14px;padding:16px;border-left:4px solid #9C27B0;">
+        <div style="font-size:15px;font-weight:800;color:#CE93D8;margin-bottom:6px;">🔗 Bracket Order — The Pro Move</div>
+        <div style="font-size:13px;line-height:1.8;color:#FCE4EC;"><strong>What it does:</strong> Places your entry + stop loss + take profit all in one click. When one fills, the other cancels automatically (OCO = One Cancels Other).<br><strong>When to use:</strong> Every single trade. Most platforms (Tradovate, NinjaTrader) support this.<br><span style="color:#CE93D8;">This is how professionals trade — one order, fully protected, both exits set before you enter.</span></div>
+      </div>
+    </div>
+
+    <div style="background:rgba(38,166,154,0.08);border-radius:12px;padding:14px;margin-bottom:18px;border:1px solid rgba(38,166,154,0.3);">
+      <div style="font-size:13px;font-weight:700;color:#26A69A;margin-bottom:8px;">🖥️ On Tradovate (Most Popular NQ/ES Platform)</div>
+      <div style="font-size:13px;line-height:2.0;color:#FCE4EC;">
+        1. Open a chart → right-click at your entry price → <strong>Buy with Bracket</strong> or <strong>Sell with Bracket</strong><br>
+        2. Set your stop distance and target distance in the bracket popup<br>
+        3. Click confirm → you're in with both exits set automatically<br>
+        4. Watch your trade on the DOM (Depth of Market) ladder<br>
+        <span style="color:#80CBC4;font-size:12px;">Tradovate is free for sim trading. Practice order entry on sim before going live — getting fast at entry is a real skill.</span>
+      </div>
+    </div>
+
+    <div style="text-align:center;">
+      <button class="btn btn-primary" onclick="closeOrderTypes()">Got it — I Know My Order Types! 💕</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ PROP FIRMS ══════════════ -->
+<div id="propFirms" style="display:none;position:fixed;inset:0;z-index:400;backdrop-filter:blur(4px);background:rgba(13,0,16,0.85);overflow-y:auto;padding:20px;">
+  <div style="max-width:620px;margin:0 auto;background:rgba(26,0,34,0.97);border:1.5px solid rgba(212,175,55,0.4);border-radius:20px;padding:28px;color:#FCE4EC;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+      <div style="font-family:'Pacifico',cursive;font-size:22px;background:linear-gradient(135deg,var(--gold),#F9E07A);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">💼 Prop Firms & Funding</div>
+      <button onclick="closePropFirms()" style="background:none;border:1.5px solid rgba(212,175,55,0.4);color:#D4AF37;border-radius:8px;padding:4px 12px;cursor:pointer;">✕ Close</button>
+    </div>
+
+    <div style="background:rgba(212,175,55,0.1);border-radius:12px;padding:14px;margin-bottom:18px;border:1px solid rgba(212,175,55,0.3);">
+      <div style="font-size:14px;font-weight:800;color:#F9E07A;margin-bottom:6px;">🔑 The Secret Most Beginners Don't Know</div>
+      <div style="font-size:13px;line-height:1.7;color:#FCE4EC;">You do <strong>NOT</strong> need $25,000+ of your own money to trade NQ futures. Prop firms give you <strong>$50,000–$150,000</strong> of their money to trade. You keep 80-90% of profits. You pay a small monthly fee (~$50–150) to attempt their evaluation — that's your only real risk.</div>
+    </div>
+
+    <div style="font-size:14px;font-weight:800;color:#F9E07A;margin-bottom:10px;">📍 How It Works (Step by Step)</div>
+    <div style="display:grid;gap:8px;margin-bottom:18px;">
+      <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:12px;border:1px solid rgba(212,175,55,0.2);font-size:13px;line-height:1.8;">
+        <strong style="color:#F9E07A;">Step 1 — Choose a firm & account size.</strong> Pay the monthly fee (~$50–150). You get login to a funded sim account (e.g. $50K or $150K).</div>
+      <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:12px;border:1px solid rgba(212,175,55,0.2);font-size:13px;line-height:1.8;">
+        <strong style="color:#F9E07A;">Step 2 — Pass the Evaluation.</strong> Trade the sim account and hit a profit target (e.g. make $3,000) without breaking rules (daily loss limit, max drawdown).</div>
+      <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:12px;border:1px solid rgba(212,175,55,0.2);font-size:13px;line-height:1.8;">
+        <strong style="color:#F9E07A;">Step 3 — Get Funded.</strong> Once you pass, they give you a live funded account. Same size, real money, real profits.</div>
+      <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:12px;border:1px solid rgba(212,175,55,0.2);font-size:13px;line-height:1.8;">
+        <strong style="color:#F9E07A;">Step 4 — Get Paid.</strong> Trade profitably, request a payout. Most firms pay weekly or bi-weekly. You keep 80–90%.</div>
+    </div>
+
+    <div style="font-size:14px;font-weight:800;color:#F9E07A;margin-bottom:10px;">🏆 Top Prop Firms for NQ/ES Beginners</div>
+    <div style="display:grid;gap:10px;margin-bottom:18px;">
+      <div style="background:rgba(38,166,154,0.1);border-radius:12px;padding:14px;border:1px solid rgba(38,166,154,0.3);">
+        <div style="font-weight:800;color:#26A69A;font-size:14px;">Apex Trader Funding ⭐ Best for Beginners</div>
+        <div style="font-size:12px;line-height:1.8;margin-top:4px;color:#FCE4EC;">
+          • $50K account: ~$167/mo | $150K account: ~$657/mo<br>
+          • One step evaluation — just hit the profit target, no time limit<br>
+          • 100% of first payout, then 90% profit split after<br>
+          • Most beginner-friendly rules. Frequently runs 80–90% off promos<br>
+          <span style="color:#80CBC4;">Promo tip: They run sales constantly — never pay full price. Search "Apex promo code" before buying.</span>
+        </div>
+      </div>
+      <div style="background:rgba(233,30,140,0.08);border-radius:12px;padding:14px;border:1px solid rgba(233,30,140,0.2);">
+        <div style="font-weight:800;color:#F48FB1;font-size:14px;">TopStep Trader — Most Well Known</div>
+        <div style="font-size:12px;line-height:1.8;margin-top:4px;color:#FCE4EC;">
+          • $50K account: ~$165/mo | $150K account: ~$375/mo<br>
+          • Two-step evaluation. More rules but very established (10+ years)<br>
+          • 90% profit split. Good education resources included<br>
+          • Strict daily loss limit rules — good discipline training
+        </div>
+      </div>
+      <div style="background:rgba(156,39,176,0.08);border-radius:12px;padding:14px;border:1px solid rgba(156,39,176,0.3);">
+        <div style="font-weight:800;color:#CE93D8;font-size:14px;">Bulenox — Cheapest Entry Point</div>
+        <div style="font-size:12px;line-height:1.8;margin-top:4px;color:#FCE4EC;">
+          • Smaller accounts available (~$30/mo range)<br>
+          • Good option to learn the eval process cheaply before going bigger<br>
+          • 80% profit split
+        </div>
+      </div>
+    </div>
+
+    <div style="background:rgba(239,83,80,0.1);border-radius:12px;padding:14px;margin-bottom:16px;border:1px solid rgba(239,83,80,0.3);">
+      <div style="font-size:13px;font-weight:800;color:#EF9A9A;margin-bottom:8px;">⚠️ The Rules You MUST Follow (or you fail the eval)</div>
+      <div style="font-size:13px;line-height:2.0;color:#FCE4EC;">
+        🛑 <strong>Daily Loss Limit</strong> — if you lose more than X in one day → account disabled for the day (e.g. $1,000 for a $50K account)<br>
+        🛑 <strong>Max Drawdown</strong> — if your account drops below a certain level from peak → eval failed<br>
+        🛑 <strong>Consistency Rule</strong> (some firms) — no single day can be more than 30-40% of total profits<br>
+        🛑 <strong>News Trading</strong> — some firms ban trading during major news events (NFP, CPI, FOMC)
+      </div>
+    </div>
+
+    <div style="background:rgba(38,166,154,0.08);border-radius:12px;padding:14px;margin-bottom:18px;border:1px solid rgba(38,166,154,0.3);">
+      <div style="font-size:13px;font-weight:700;color:#26A69A;margin-bottom:6px;">💡 Tay Bonnie's Path — Realistic Timeline</div>
+      <div style="font-size:13px;line-height:1.8;color:#B2DFDB;">
+        <strong>Months 1-2:</strong> Practice on Barbie Trades daily. Learn to read trend + S&D zones consistently<br>
+        <strong>Month 3:</strong> Open free Tradovate sim account. Practice placing real bracket orders on sim<br>
+        <strong>Month 4:</strong> Once you're profitable on sim for 2+ weeks straight → attempt your first Apex eval<br>
+        <strong>Month 5+:</strong> Get funded, trade live, get that first payout 💰
+      </div>
+    </div>
+
+    <div style="text-align:center;">
+      <button class="btn btn-primary" onclick="closePropFirms()">I Know My Path to Funded! 💕</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ PRE-TRADE CHECKLIST ══════════════ -->
+<div id="preChecklist" style="display:none;position:fixed;inset:0;z-index:400;backdrop-filter:blur(4px);background:rgba(13,0,16,0.85);overflow-y:auto;padding:20px;">
+  <div style="max-width:620px;margin:0 auto;background:rgba(26,0,34,0.97);border:1.5px solid rgba(212,175,55,0.4);border-radius:20px;padding:28px;color:#FCE4EC;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+      <div style="font-family:'Pacifico',cursive;font-size:22px;background:linear-gradient(135deg,var(--gold),#F9E07A);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">✅ Pre-Trade Checklist</div>
+      <button onclick="closePreChecklist()" style="background:none;border:1.5px solid rgba(212,175,55,0.4);color:#D4AF37;border-radius:8px;padding:4px 12px;cursor:pointer;">✕ Close</button>
+    </div>
+    <div style="font-size:12px;color:#888;margin-bottom:18px;">Run through this before EVERY trade. If you can't check all required items → don't enter.</div>
+
+    <style>
+      .ptc-item { display:flex; align-items:flex-start; gap:12px; background:rgba(255,255,255,0.04); border-radius:12px; padding:12px 14px; margin-bottom:8px; border:1px solid rgba(212,175,55,0.15); cursor:pointer; transition:background .15s; }
+      .ptc-item:hover { background:rgba(255,255,255,0.07); }
+      .ptc-item input[type=checkbox] { width:20px; height:20px; accent-color:#E91E8C; flex-shrink:0; margin-top:2px; cursor:pointer; }
+      .ptc-label { font-size:13px; line-height:1.6; color:#FCE4EC; }
+      .ptc-label strong { color:#F9E07A; }
+      .ptc-req { font-size:10px; color:#E91E8C; font-weight:700; letter-spacing:1px; margin-left:6px; }
+      .ptc-section { font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:2px; color:#D4AF37; margin:16px 0 8px; }
+    </style>
+
+    <div class="ptc-section">🔍 Trend & Bias</div>
+    <label class="ptc-item"><input type="checkbox" class="ptc-check" data-req="1" onchange="updateChecklistStatus()"><div class="ptc-label"><strong>Higher timeframe bias confirmed</strong> — Daily EMAs are bullish (pink above gold) or bearish (pink below gold). I know which direction I'm trading today.<span class="ptc-req">REQUIRED</span></div></label>
+    <label class="ptc-item"><input type="checkbox" class="ptc-check" data-req="1" onchange="updateChecklistStatus()"><div class="ptc-label"><strong>Trading timeframe aligns with bias</strong> — 1H or 5M EMA direction matches the daily. Not fighting the trend.<span class="ptc-req">REQUIRED</span></div></label>
+
+    <div class="ptc-section">📦 Zone & Setup</div>
+    <label class="ptc-item"><input type="checkbox" class="ptc-check" data-req="1" onchange="updateChecklistStatus()"><div class="ptc-label"><strong>Fresh S&D zone identified</strong> — I've marked a DBR demand zone (if bullish) or RBD supply zone (if bearish). It hasn't been tested before.<span class="ptc-req">REQUIRED</span></div></label>
+    <label class="ptc-item"><input type="checkbox" class="ptc-check" data-req="1" onchange="updateChecklistStatus()"><div class="ptc-label"><strong>Confirmation candle present</strong> — I see a pin bar, engulfing, or doji at the zone. Not just touching — there's a reaction.<span class="ptc-req">REQUIRED</span></div></label>
+    <label class="ptc-item"><input type="checkbox" class="ptc-check" data-req="0" onchange="updateChecklistStatus()"><div class="ptc-label"><strong>Break of Structure in my direction</strong> — Price has made a BOS (new HH in uptrend or new LL in downtrend) recently. Trend is confirmed.</div></label>
+    <label class="ptc-item"><input type="checkbox" class="ptc-check" data-req="0" onchange="updateChecklistStatus()"><div class="ptc-label"><strong>FVG or confluence at zone</strong> — There's a Fair Value Gap or EMA 20 sitting at the same level as my S&D zone. Extra confirmation.</div></label>
+
+    <div class="ptc-section">📐 Risk Management</div>
+    <label class="ptc-item"><input type="checkbox" class="ptc-check" data-req="1" onchange="updateChecklistStatus()"><div class="ptc-label"><strong>R:R is at least 2:1</strong> — My target is at least 2× my stop distance away. If it's less than 2:1 this trade is not worth taking.<span class="ptc-req">REQUIRED</span></div></label>
+    <label class="ptc-item"><input type="checkbox" class="ptc-check" data-req="1" onchange="updateChecklistStatus()"><div class="ptc-label"><strong>Position size calculated</strong> — I know exactly how many contracts and my exact dollar risk. It's 1-2% of my account max.<span class="ptc-req">REQUIRED</span></div></label>
+    <label class="ptc-item"><input type="checkbox" class="ptc-check" data-req="1" onchange="updateChecklistStatus()"><div class="ptc-label"><strong>Stop loss placed behind structure</strong> — My stop is below a swing low (for longs) or above a swing high (for shorts). Not a round number, behind real structure.<span class="ptc-req">REQUIRED</span></div></label>
+
+    <div class="ptc-section">📰 News & Session</div>
+    <label class="ptc-item"><input type="checkbox" class="ptc-check" data-req="1" onchange="updateChecklistStatus()"><div class="ptc-label"><strong>No red-folder news in the next 30 min</strong> — I checked the economic calendar. No NFP, CPI, FOMC, or other major event about to drop.<span class="ptc-req">REQUIRED</span></div></label>
+    <label class="ptc-item"><input type="checkbox" class="ptc-check" data-req="0" onchange="updateChecklistStatus()"><div class="ptc-label"><strong>In an active session</strong> — I'm trading during NY open (9:30–11:30 AM) or afternoon (2–3:45 PM). Not in the dead zone.</div></label>
+
+    <div class="ptc-section">🧠 Mental State</div>
+    <label class="ptc-item"><input type="checkbox" class="ptc-check" data-req="1" onchange="updateChecklistStatus()"><div class="ptc-label"><strong>Not in revenge mode</strong> — I haven't already had 2 losses today. I'm not trying to make back a loss. My head is clear.<span class="ptc-req">REQUIRED</span></div></label>
+    <label class="ptc-item"><input type="checkbox" class="ptc-check" data-req="0" onchange="updateChecklistStatus()"><div class="ptc-label"><strong>I'm not chasing</strong> — Price came to MY zone, I didn't chase price up or down. I waited for the setup to come to me.</div></label>
+
+    <div style="margin-top:18px;" id="checklistStatus"></div>
+
+    <div style="display:flex;gap:10px;justify-content:center;margin-top:16px;flex-wrap:wrap;">
+      <button class="btn btn-secondary" onclick="resetChecklist()">🔄 Reset</button>
+      <button class="btn btn-primary" onclick="closePreChecklist()">Close</button>
     </div>
   </div>
 </div>
