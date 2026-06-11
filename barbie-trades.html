@@ -2451,6 +2451,25 @@ function paperCurrentPrice(){
   const idx=app.winStart+HISTORY+app.revealIdx;
   return app.candles[idx]?app.candles[idx].c:null;
 }
+// Average True Range — used to set realistic default stop distances
+function paperATR(period=14){
+  const endIdx=app.winStart+HISTORY+app.revealIdx;
+  let sum=0, count=0;
+  for(let i=Math.max(1,endIdx-period+1);i<=endIdx;i++){
+    const c=app.candles[i], p=app.candles[i-1];
+    if(!c||!p)continue;
+    const tr=Math.max(c.h-c.l, Math.abs(c.h-p.c), Math.abs(c.l-p.c));
+    sum+=tr; count++;
+  }
+  return count>0?sum/count:instrMeta(app.instrument).stopPresets[1];
+}
+// Returns a sensible default stop distance based on current ATR
+function paperDefaultStopDist(){
+  const atr=paperATR();
+  const dec=app.instrument==='CL=F'?2:0;
+  // Use ~1× ATR as the stop distance (minimum 1 tick, rounded to nearest point)
+  return parseFloat(Math.max(atr*1, instrMeta(app.instrument).stopPresets[0]).toFixed(dec));
+}
 function paperUnrealizedPnl(){
   if(!app.paperPos)return 0;
   const cur=paperCurrentPrice(); if(!cur)return 0;
@@ -2460,8 +2479,9 @@ function paperUnrealizedPnl(){
 function paperBuy(){
   if(app.paperPos)return;
   const price=paperCurrentPrice(); if(!price)return;
-  const def=instrMeta(app.instrument).stopPresets[1];
-  const stop=+(price-def).toFixed(2), target=+(price+def*2).toFixed(2);
+  const def=paperDefaultStopDist();
+  const dec=app.instrument==='CL=F'?2:0;
+  const stop=+(price-def).toFixed(dec), target=+(price+def*2).toFixed(dec);
   app.paperPos={dir:'long',entry:price,entryIdx:app.revealIdx,stop,target};
   app.entry=price; app.stop=stop; app.target=target;
   // Auto-pause so user can drag lines before candles move
@@ -2472,8 +2492,9 @@ function paperBuy(){
 function paperSell(){
   if(app.paperPos)return;
   const price=paperCurrentPrice(); if(!price)return;
-  const def=instrMeta(app.instrument).stopPresets[1];
-  const stop=+(price+def).toFixed(2), target=+(price-def*2).toFixed(2);
+  const def=paperDefaultStopDist();
+  const dec=app.instrument==='CL=F'?2:0;
+  const stop=+(price+def).toFixed(dec), target=+(price-def*2).toFixed(dec);
   app.paperPos={dir:'short',entry:price,entryIdx:app.revealIdx,stop,target};
   app.entry=price; app.stop=stop; app.target=target;
   // Auto-pause so user can drag lines before candles move
