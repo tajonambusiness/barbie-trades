@@ -214,6 +214,33 @@ body {
 .inst-desc { font-size: 12px; color: #AD1457; line-height: 1.55; }
 .action-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 
+/* ── DESKTOP: sidebar layout so chart fills full height ── */
+@media (min-width: 900px) {
+  #training.active {
+    display: grid !important;
+    grid-template-rows: auto 1fr;
+    grid-template-columns: 1fr 290px;
+    overflow: hidden;
+  }
+  #training.active .training-header {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+  #training.active .chart-wrap {
+    grid-row: 2;
+    grid-column: 1;
+  }
+  #training.active .control-panel {
+    grid-row: 2;
+    grid-column: 2;
+    max-height: none !important;
+    border-top: none;
+    border-left: 2px solid var(--border);
+    overflow-y: auto;
+  }
+  #training.active .control-panel-scroll { overflow-y: visible; }
+}
+
 /* ── MOBILE RESPONSIVE ── */
 @media (max-width: 768px) {
   .training-header { padding: 7px 12px; gap: 8px; }
@@ -1011,6 +1038,36 @@ function drawChart(visCount, canvasId='chartCanvas'){
     if(isUp && bodyW>4){
       ctx.strokeStyle='rgba(212,175,55,0.3)'; ctx.lineWidth=0.5;
       ctx.strokeRect(x,topB,bodyW,Math.max(botB-topB,1));
+    }
+  }
+
+  // Volume bars — drawn below chart area, semi-transparent
+  const maxVol=Math.max(...slice.map(c=>c.v||0),1);
+  const volMaxH=22, volBottom=H-18;
+  for(let i=0;i<slice.length;i++){
+    const c=slice[i]; if(!c.v)continue;
+    const isUp=c.c>=c.o;
+    const bH=Math.max(1,(c.v/maxVol)*volMaxH);
+    const x=PAD.left+i*candleW+(candleW-bodyW)/2;
+    ctx.fillStyle=isUp?'rgba(233,30,140,0.22)':'rgba(30,30,30,0.18)';
+    ctx.fillRect(x,volBottom-bH,bodyW,bH);
+  }
+
+  // Current price line + badge (last visible candle close)
+  const lastC=slice[slice.length-1];
+  if(lastC){
+    const curY=p2y(lastC.c,minP,maxP,H);
+    if(curY>=PAD.top&&curY<=H-PAD.bottom){
+      ctx.strokeStyle='rgba(233,30,140,0.35)'; ctx.lineWidth=1; ctx.setLineDash([4,4]);
+      ctx.beginPath(); ctx.moveTo(PAD.left,curY); ctx.lineTo(W-PAD.right,curY); ctx.stroke();
+      ctx.setLineDash([]);
+      const prStr=lastC.c.toFixed(app.instrument==='CL=F'?2:0);
+      ctx.font='bold 11px Nunito,sans-serif';
+      const tw=ctx.measureText(prStr).width;
+      ctx.fillStyle='#E91E8C';
+      ctx.beginPath(); ctx.roundRect(W-tw-14,curY-9,tw+10,18,3); ctx.fill();
+      ctx.fillStyle='white'; ctx.textAlign='right';
+      ctx.fillText(prStr,W-6,curY+5);
     }
   }
 
@@ -2153,6 +2210,7 @@ function loadPaperWindow(){
   const max=app.candles.length-HISTORY-REVEAL-15; if(max<1)return;
   app.winStart=Math.floor(Math.random()*max);
   app.entry=app.stop=app.target=null; app.revealIdx=0;
+  app.phase='paper'; // keeps isActive()=true so pan/zoom/drag work
   app.drawings=[]; app.drawFirstPt=null; app.viewShift=0; app.viewZoom=1; app.viewOffsetY=0;
   drawChart(HISTORY+1);
   renderPaperPanel();
