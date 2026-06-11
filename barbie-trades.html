@@ -131,6 +131,77 @@ body {
 .btn-hint { background: linear-gradient(135deg, var(--gold), #F9E07A); color: #1a0010; font-weight: 900; box-shadow: 0 4px 16px rgba(212,175,55,.4); }
 .btn-hint:hover { transform: translateY(-2px); }
 
+/* ── ORDER TICKET (TradingView-style) ── */
+.order-ticket {
+  background: linear-gradient(135deg, rgba(10,0,20,0.97), rgba(22,4,38,0.97));
+  border: 1.5px solid rgba(233,30,140,0.25);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 8px;
+  color: white;
+}
+.ot-row { display:flex; align-items:center; gap:8px; margin-bottom:9px; }
+.ot-label { font-size:11px; font-weight:700; width:80px; flex-shrink:0; color:#999; }
+.ot-input {
+  background: rgba(255,255,255,0.07);
+  border: 1.5px solid rgba(255,255,255,0.14);
+  border-radius: 8px;
+  color: white;
+  font-family: 'Nunito', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 7px 10px;
+  width: 108px;
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+  -moz-appearance: textfield;
+}
+.ot-input::-webkit-inner-spin-button,.ot-input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.ot-input:focus { border-color: rgba(233,30,140,0.7); box-shadow: 0 0 0 2px rgba(233,30,140,0.13); }
+.ot-pts { font-size:11px; color:#888; min-width:40px; }
+.ot-stats {
+  background: rgba(255,255,255,0.05);
+  border-radius: 9px;
+  padding: 8px 10px;
+  display: flex;
+  gap: 0;
+  margin: 4px 0 10px;
+}
+.ot-stat { flex:1; text-align:center; }
+.ot-stat-lbl { font-size:10px; color:#666; margin-bottom:2px; }
+.ot-stat-val { font-size:15px; font-weight:900; }
+.btn-go-live {
+  width: 100%;
+  padding: 13px;
+  background: linear-gradient(135deg, #26A69A, #00BCD4);
+  color: white;
+  font-weight: 900;
+  font-size: 15px;
+  border-radius: 11px;
+  border: none;
+  cursor: pointer;
+  letter-spacing: .4px;
+  box-shadow: 0 4px 18px rgba(38,166,154,0.4);
+  transition: transform .1s;
+  font-family: 'Nunito', sans-serif;
+}
+.btn-go-live:hover { transform: translateY(-1px); }
+.btn-go-live.short { background: linear-gradient(135deg, #EF5350, #E91E8C); box-shadow: 0 4px 18px rgba(239,83,80,0.4); }
+.btn-cancel-ot {
+  width: 100%;
+  padding: 8px;
+  background: transparent;
+  color: #555;
+  font-size: 12px;
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 8px;
+  cursor: pointer;
+  margin-top: 7px;
+  font-family: 'Nunito', sans-serif;
+  transition: color .15s;
+}
+.btn-cancel-ot:hover { color: #EF5350; border-color: rgba(239,83,80,0.3); }
+
 /* Training header */
 #training { position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh; overflow: hidden; }
 .training-header {
@@ -1087,7 +1158,36 @@ function drawChart(visCount, canvasId='chartCanvas'){
   }
 
   // Trade lines
-  if(app.entry!==null)drawHLine(ctx,app.entry,'#E91E8C','ENTRY',minP,maxP,W,H);
+  if(app.entry!==null){
+    if(app.mode==='paper' && app.paperPos){
+      // P&L band between entry and current price (TradingView-style)
+      const lastC=slice[slice.length-1];
+      if(lastC){
+        const entryY=p2y(app.entry,minP,maxP,H);
+        const curY=p2y(lastC.c,minP,maxP,H);
+        const isProfit=app.paperPos.dir==='long'?(lastC.c>app.entry):(lastC.c<app.entry);
+        ctx.fillStyle=isProfit?'rgba(38,166,154,0.13)':'rgba(239,83,80,0.10)';
+        ctx.fillRect(PAD.left,Math.min(entryY,curY),W-PAD.left-PAD.right,Math.abs(curY-entryY));
+      }
+      // Entry line — gold dashed with right-side badge
+      const ey=p2y(app.entry,minP,maxP,H);
+      ctx.strokeStyle='rgba(249,224,122,0.7)'; ctx.lineWidth=1.5; ctx.setLineDash([5,4]);
+      ctx.beginPath(); ctx.moveTo(PAD.left,ey); ctx.lineTo(W-PAD.right,ey); ctx.stroke();
+      ctx.setLineDash([]);
+      const dec=app.instrument==='CL=F'?2:0;
+      const eStr=app.entry.toFixed(dec);
+      const dir=app.paperPos.dir==='long'?'▲ LONG':'▼ SHORT';
+      const elbl=`${dir}  ${eStr}`;
+      ctx.font='bold 10px Nunito,sans-serif';
+      const elW=ctx.measureText(elbl).width+14, elH=19, elX=W-PAD.right-elW-2;
+      ctx.fillStyle='rgba(249,224,122,0.9)';
+      ctx.beginPath(); ctx.roundRect(elX,ey-elH/2,elW,elH,5); ctx.fill();
+      ctx.fillStyle='#1a0010'; ctx.textAlign='center';
+      ctx.fillText(elbl,elX+elW/2,ey+4);
+    } else {
+      drawHLine(ctx,app.entry,'#E91E8C','ENTRY',minP,maxP,W,H);
+    }
+  }
   if(app.stop!==null) drawDragLine(ctx,app.stop,'#EF5350','STOP',minP,maxP,W,H,app.mode==='paper',app.draggingLine==='stop');
   if(app.target!==null)drawDragLine(ctx,app.target,'#26A69A','TARGET',minP,maxP,W,H,app.mode==='paper',app.draggingLine==='target');
 
@@ -1414,9 +1514,19 @@ document.getElementById('chartCanvas').addEventListener('mouseleave',()=>{
     // Line dragging takes priority
     if(app.draggingLine&&app.paperPos){
       const newPrice=yToPrice(e.clientY);
-      if(app.draggingLine==='stop'){ app.paperPos.stop=newPrice; app.stop=newPrice; }
-      else { app.paperPos.target=newPrice; app.target=newPrice; }
-      drawChart(HISTORY+1+app.revealIdx); renderPaperPanel(); return;
+      const dec=app.instrument==='CL=F'?2:0;
+      if(app.draggingLine==='stop'){
+        app.paperPos.stop=newPrice; app.stop=newPrice;
+        const el=document.getElementById('otStopInput');
+        if(el) el.value=newPrice.toFixed(dec);
+      } else {
+        app.paperPos.target=newPrice; app.target=newPrice;
+        const el=document.getElementById('otTargetInput');
+        if(el) el.value=newPrice.toFixed(dec);
+      }
+      drawChart(HISTORY+1+app.revealIdx);
+      updateOrderTicketStats();
+      return;
     }
     // Cursor hint when hovering near a draggable line
     if(!drag&&!app.drawTool&&app.paperPos){
@@ -1478,9 +1588,17 @@ document.getElementById('chartCanvas').addEventListener('mouseleave',()=>{
     // Line dragging
     if(app.draggingLine&&app.paperPos&&e.touches.length===1){
       const newPrice=yToPrice(e.touches[0].clientY);
-      if(app.draggingLine==='stop'){ app.paperPos.stop=newPrice; app.stop=newPrice; }
-      else { app.paperPos.target=newPrice; app.target=newPrice; }
-      drawChart(HISTORY+1+app.revealIdx); renderPaperPanel(); return;
+      const dec=app.instrument==='CL=F'?2:0;
+      if(app.draggingLine==='stop'){
+        app.paperPos.stop=newPrice; app.stop=newPrice;
+        const el=document.getElementById('otStopInput');
+        if(el) el.value=newPrice.toFixed(dec);
+      } else {
+        app.paperPos.target=newPrice; app.target=newPrice;
+        const el=document.getElementById('otTargetInput');
+        if(el) el.value=newPrice.toFixed(dec);
+      }
+      drawChart(HISTORY+1+app.revealIdx); updateOrderTicketStats(); return;
     }
     if(e.touches.length===1&&t1&&!app.drawTool){
       const canvas=document.getElementById('chartCanvas');
@@ -2363,13 +2481,63 @@ function paperSetStopPts(pts){
   if(!app.paperPos)return;
   app.paperPos.stop=app.paperPos.dir==='long'?app.paperPos.entry-pts:app.paperPos.entry+pts;
   app.stop=app.paperPos.stop;
-  renderPaperPanel(); drawChart(HISTORY+1+app.revealIdx);
+  drawChart(HISTORY+1+app.revealIdx);
+  if(app.paperPaused){ updateOrderTicketStats(); } else { renderPaperPanel(); }
 }
 function paperSetTargetPts(pts){
   if(!app.paperPos)return;
   app.paperPos.target=app.paperPos.dir==='long'?app.paperPos.entry+pts:app.paperPos.entry-pts;
   app.target=app.paperPos.target;
-  renderPaperPanel(); drawChart(HISTORY+1+app.revealIdx);
+  drawChart(HISTORY+1+app.revealIdx);
+  if(app.paperPaused){ updateOrderTicketStats(); } else { renderPaperPanel(); }
+}
+function paperUpdateStop(val){
+  if(!app.paperPos)return;
+  const v=parseFloat(val); if(isNaN(v))return;
+  app.paperPos.stop=v; app.stop=v;
+  drawChart(HISTORY+1+app.revealIdx);
+  updateOrderTicketStats();
+}
+function paperUpdateTarget(val){
+  if(!app.paperPos)return;
+  const v=parseFloat(val); if(isNaN(v))return;
+  app.paperPos.target=v; app.target=v;
+  drawChart(HISTORY+1+app.revealIdx);
+  updateOrderTicketStats();
+}
+function paperGoLive(){
+  if(!app.paperPos)return;
+  app.paperPaused=false;
+  startPaperTimer();
+  renderPaperPanel();
+}
+function paperCancelEntry(){
+  app.paperPos=null;
+  app.entry=null; app.stop=null; app.target=null;
+  app.paperPaused=false;
+  startPaperTimer();
+  renderPaperPanel();
+  drawChart(HISTORY+1+app.revealIdx);
+}
+function updateOrderTicketStats(){
+  if(!app.paperPos)return;
+  const pos=app.paperPos, ppt=paperPPT();
+  const dec=app.instrument==='CL=F'?2:0;
+  const stopPts=pos.stop!=null?Math.abs(pos.stop-pos.entry):0;
+  const tgtPts=pos.target!=null?Math.abs(pos.target-pos.entry):0;
+  const rr=stopPts>0?(tgtPts/stopPts).toFixed(1):'—';
+  const risk=(stopPts*ppt).toFixed(0);
+  const reward=(tgtPts*ppt).toFixed(0);
+  const rrEl=document.getElementById('otRR'); if(rrEl)rrEl.textContent=rr+':1';
+  const riskEl=document.getElementById('otRisk'); if(riskEl)riskEl.textContent='$'+risk;
+  const rewardEl=document.getElementById('otReward'); if(rewardEl)rewardEl.textContent='$'+reward;
+  // Update pts labels
+  if(app.paperPaused){
+    const spl=document.getElementById('otStopPts');
+    if(spl)spl.textContent=stopPts>0?'-'+stopPts.toFixed(dec===2?1:0)+'pt':'';
+    const tpl=document.getElementById('otTgtPts');
+    if(tpl)tpl.textContent=tgtPts>0?'+'+tgtPts.toFixed(dec===2?1:0)+'pt':'';
+  }
 }
 function setPaperContract(type){
   app.paperContract=type;
@@ -2478,38 +2646,116 @@ function renderPaperPanel(){
       <span style="color:#666;font-size:10px;">${t.reason}</span>
     </div>`).join('');
 
+  const dec=app.instrument==='CL=F'?2:0;
+  const step=app.instrument==='CL=F'?'0.01':app.instrument==='GC=F'?'0.1':'1';
+
+  // ── STATE A: No position → entry controls ──
+  if(!app.paperPos){
+    document.getElementById('actionRow').innerHTML=`
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <button class="btn-paper-long" onclick="paperBuy()">📈 LONG</button>
+        <button class="btn-paper-short" onclick="paperSell()">📉 SHORT</button>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">
+        <span style="font-size:11px;color:#aaa;">Size:</span>
+        <button class="paper-speed-btn${app.paperContract==='micro'?' active':''}" onclick="setPaperContract('micro')">Micro (${meta.microName})</button>
+        <button class="paper-speed-btn${app.paperContract==='full'?' active':''}" onclick="setPaperContract('full')">Full (${meta.fullName})</button>
+      </div>
+      <div class="paper-speed-row">
+        <span>Speed:</span>
+        <button class="paper-speed-btn${spd===500?' active':''}" id="s05" onclick="setPaperSpeed(500)">Fast</button>
+        <button class="paper-speed-btn${spd===1200?' active':''}" id="s12" onclick="setPaperSpeed(1200)">Normal</button>
+        <button class="paper-speed-btn${spd===2500?' active':''}" id="s25" onclick="setPaperSpeed(2500)">Slow</button>
+        <button class="paper-speed-btn" id="paperPauseBtn" onclick="togglePaperPause()" style="margin-left:6px;">${app.paperPaused?'▶ Play':'⏸ Pause'}</button>
+        <button class="paper-speed-btn" onclick="paperResetAccount()" style="margin-left:auto;color:#EF5350;">🔄 Reset $</button>
+      </div>
+      ${recentTrades?`<div class="paper-trades-list">${recentTrades}</div>`:''}`;
+    return;
+  }
+
+  // ── STATE B: Order ticket (paused, just entered) ──
+  if(app.paperPaused){
+    const pos=app.paperPos;
+    const stopPts=pos.stop!=null?Math.abs(pos.stop-pos.entry):0;
+    const tgtPts=pos.target!=null?Math.abs(pos.target-pos.entry):0;
+    const rr=stopPts>0?(tgtPts/stopPts).toFixed(1):'—';
+    const risk=(stopPts*ppt).toFixed(0);
+    const reward=(tgtPts*ppt).toFixed(0);
+    const isLong=pos.dir==='long';
+    const stopVal=pos.stop!=null?pos.stop.toFixed(dec):'';
+    const tgtVal=pos.target!=null?pos.target.toFixed(dec):'';
+    const stopPtsLbl=stopPts>0?`-${stopPts.toFixed(1)}pt`:'';
+    const tgtPtsLbl=tgtPts>0?`+${tgtPts.toFixed(1)}pt`:'';
+    document.getElementById('actionRow').innerHTML=`
+      <div class="order-ticket">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+          <span style="font-size:22px;">${isLong?'📈':'📉'}</span>
+          <div>
+            <div style="font-weight:900;font-size:15px;color:${isLong?'#26A69A':'#EF5350'}">${isLong?'BUY':'SELL'} ${paperContractName()}</div>
+            <div style="font-size:11px;color:#888">Set your levels, then Place Order</div>
+          </div>
+        </div>
+        <div class="ot-row">
+          <span class="ot-label">Entry</span>
+          <span style="color:#F9E07A;font-size:14px;font-weight:900">${pos.entry.toFixed(dec)}</span>
+        </div>
+        <div class="ot-row">
+          <span class="ot-label" style="color:#EF5350">Stop Loss</span>
+          <input class="ot-input" id="otStopInput" type="number" value="${stopVal}" step="${step}" oninput="paperUpdateStop(this.value)">
+          <span class="ot-pts" style="color:#EF5350" id="otStopPts">${stopPtsLbl}</span>
+        </div>
+        <div class="ot-row">
+          <span class="ot-label" style="color:#26A69A">Take Profit</span>
+          <input class="ot-input" id="otTargetInput" type="number" value="${tgtVal}" step="${step}" oninput="paperUpdateTarget(this.value)">
+          <span class="ot-pts" style="color:#26A69A" id="otTgtPts">${tgtPtsLbl}</span>
+        </div>
+        <div class="ot-stats">
+          <div class="ot-stat">
+            <div class="ot-stat-lbl">R:R</div>
+            <div class="ot-stat-val" style="color:#F9E07A" id="otRR">${rr}:1</div>
+          </div>
+          <div class="ot-stat">
+            <div class="ot-stat-lbl">Risk $</div>
+            <div class="ot-stat-val" style="color:#EF5350" id="otRisk">$${risk}</div>
+          </div>
+          <div class="ot-stat">
+            <div class="ot-stat-lbl">Reward $</div>
+            <div class="ot-stat-val" style="color:#26A69A" id="otReward">$${reward}</div>
+          </div>
+        </div>
+        <div style="font-size:10px;color:#555;text-align:center;margin-bottom:8px;">💡 Drag lines on chart to adjust</div>
+        <button class="btn-go-live${isLong?'':' short'}" onclick="paperGoLive()">▶ PLACE ORDER</button>
+        <button class="btn-cancel-ot" onclick="paperCancelEntry()">✕ Cancel</button>
+      </div>
+      <div class="paper-speed-row">
+        <span>Speed:</span>
+        <button class="paper-speed-btn${spd===500?' active':''}" id="s05" onclick="setPaperSpeed(500)">Fast</button>
+        <button class="paper-speed-btn${spd===1200?' active':''}" id="s12" onclick="setPaperSpeed(1200)">Normal</button>
+        <button class="paper-speed-btn${spd===2500?' active':''}" id="s25" onclick="setPaperSpeed(2500)">Slow</button>
+      </div>`;
+    return;
+  }
+
+  // ── STATE C: Live position ──
   document.getElementById('actionRow').innerHTML=`
     ${posHtml}
-    ${app.paperPos
-      ? `${app.paperPaused?`<div style="background:rgba(212,175,55,0.12);border:1px solid rgba(212,175,55,0.4);border-radius:8px;padding:7px 10px;margin-bottom:8px;font-size:12px;color:#F9E07A;font-weight:700;">
-           ⏸ Paused — drag the red &amp; green lines to your levels, then press ▶ Play
-         </div>`:''}
-         <div style="display:flex;gap:8px;margin-bottom:6px;">
-           <button class="btn-paper-exit" onclick="paperExit()">🚪 Exit</button>
-         </div>
-         <div style="margin-bottom:4px;">
-           <div style="font-size:11px;color:#EF5350;font-weight:700;margin-bottom:3px;">📍 Stop Loss — drag red line or quick-set:</div>
-           <div style="display:flex;gap:4px;">${stopBtns}</div>
-         </div>
-         <div style="margin-bottom:8px;">
-           <div style="font-size:11px;color:#26A69A;font-weight:700;margin-bottom:3px;">🎯 Take Profit — drag green line or quick-set:</div>
-           <div style="display:flex;gap:4px;">${tgtBtns}</div>
-         </div>`
-      : `<div style="display:flex;gap:8px;margin-bottom:8px;">
-           <button class="btn-paper-long" onclick="paperBuy()">📈 LONG</button>
-           <button class="btn-paper-short" onclick="paperSell()">📉 SHORT</button>
-         </div>
-         <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">
-           <span style="font-size:11px;color:#aaa;">Size:</span>
-           <button class="paper-speed-btn${app.paperContract==='micro'?' active':''}" onclick="setPaperContract('micro')">Micro (${meta.microName})</button>
-           <button class="paper-speed-btn${app.paperContract==='full'?' active':''}" onclick="setPaperContract('full')">Full (${meta.fullName})</button>
-         </div>`}
+    <div style="display:flex;gap:8px;margin-bottom:6px;">
+      <button class="btn-paper-exit" onclick="paperExit()">🚪 Exit Position</button>
+    </div>
+    <div style="margin-bottom:4px;">
+      <div style="font-size:11px;color:#EF5350;font-weight:700;margin-bottom:3px;">📍 Stop Loss — drag red line or quick-set:</div>
+      <div style="display:flex;gap:4px;">${stopBtns}</div>
+    </div>
+    <div style="margin-bottom:8px;">
+      <div style="font-size:11px;color:#26A69A;font-weight:700;margin-bottom:3px;">🎯 Take Profit — drag green line or quick-set:</div>
+      <div style="display:flex;gap:4px;">${tgtBtns}</div>
+    </div>
     <div class="paper-speed-row">
       <span>Speed:</span>
       <button class="paper-speed-btn${spd===500?' active':''}" id="s05" onclick="setPaperSpeed(500)">Fast</button>
       <button class="paper-speed-btn${spd===1200?' active':''}" id="s12" onclick="setPaperSpeed(1200)">Normal</button>
       <button class="paper-speed-btn${spd===2500?' active':''}" id="s25" onclick="setPaperSpeed(2500)">Slow</button>
-      <button class="paper-speed-btn" id="paperPauseBtn" onclick="togglePaperPause()" style="margin-left:6px;">${app.paperPaused?'▶ Play':'⏸ Pause'}</button>
+      <button class="paper-speed-btn" id="paperPauseBtn" onclick="togglePaperPause()" style="margin-left:6px;">⏸ Pause</button>
       <button class="paper-speed-btn" onclick="paperResetAccount()" style="margin-left:auto;color:#EF5350;">🔄 Reset $</button>
     </div>
     ${recentTrades?`<div class="paper-trades-list">${recentTrades}</div>`:''}`;
