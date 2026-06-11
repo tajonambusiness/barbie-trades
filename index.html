@@ -489,7 +489,16 @@ select { font-family: 'Nunito',sans-serif; font-size: 13px; font-weight: 700; ba
   </div>
 
   <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;align-items:center;">
-    <select id="instrSelect"><option value="NQ=F">NQ — Nasdaq Futures</option><option value="ES=F">ES — S&P 500 Futures</option></select>
+    <select id="instrSelect">
+      <optgroup label="Equity Index (Primary)">
+        <option value="NQ=F">NQ — Nasdaq Futures</option>
+        <option value="ES=F">ES — S&P 500 Futures</option>
+      </optgroup>
+      <optgroup label="Commodities">
+        <option value="CL=F">CL — Crude Oil Futures</option>
+        <option value="GC=F">GC — Gold Futures</option>
+      </optgroup>
+    </select>
     <select id="tfSelect"><option value="1d">Daily candles</option><option value="1h">1-Hour candles</option><option value="5m">5 Min candles</option></select>
   </div>
 
@@ -751,28 +760,49 @@ function calcEMA(closes,period){
 }
 
 // ── DATA FETCH ───────────────────────────────
+// Returns per-instrument constants used across chart, paper trading, and position sizing
+function instrMeta(instr){
+  switch(instr){
+    case 'ES=F': return {microName:'MES',fullName:'ES',microPPT:5,fullPPT:50,
+      stopPresets:[5,10,20],targetPresets:[5,10,20]};
+    case 'CL=F': return {microName:'MCL',fullName:'CL',microPPT:100,fullPPT:1000,
+      stopPresets:[0.5,1,2],targetPresets:[0.5,1,2]};
+    case 'GC=F': return {microName:'MGC',fullName:'GC',microPPT:10,fullPPT:100,
+      stopPresets:[10,20,40],targetPresets:[10,20,40]};
+    default:     return {microName:'MNQ',fullName:'NQ',microPPT:2,fullPPT:20,
+      stopPresets:[15,25,50],targetPresets:[15,25,50]};
+  }
+}
+
 function generateFallbackData(instr, tf){
-  const iES=instr==='ES=F';
+  const cfgMap={
+    'NQ=F':{price:19500,min:13000,max:24000,r5:12, rD:140,mult:4,seed:67890},
+    'ES=F':{price:4800, min:3500, max:5800, r5:3,  rD:35, mult:1,seed:12345},
+    'CL=F':{price:74,   min:50,   max:120,  r5:0.3,rD:2,  mult:1,seed:33333},
+    'GC=F':{price:2400, min:1800, max:3500, r5:4,  rD:25, mult:1,seed:44444},
+  };
+  const cfg=cfgMap[instr]||cfgMap['NQ=F'];
   const is5m=tf==='5m';
-  let s=iES?12345:67890;
+  const isCommodity=instr==='CL=F'||instr==='GC=F';
+  let s=cfg.seed;
   const r=()=>{ s=(s*1664525+1013904223)>>>0; return s/4294967296; };
   const rn=()=>{ const u=r()||1e-9,v=r(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); };
-  let price=iES?4800:19500;
-  const mult=iES?1:4;
+  let price=cfg.price;
+  const {mult,min:priceMin,max:priceMax}=cfg;
   const candles=[];
   let tDir=1, tLen=0, vol=1;
+  const baseRange=is5m?cfg.r5:cfg.rD;
 
   if(is5m){
-    // 5-minute candles: NQ moves ~3-15pts per bar, ES ~1-5pts
-    const baseRange=iES?3:12;
-    const totalBars=800; // ~800 5min bars = ~4 trading days
+    const totalBars=800;
     for(let i=totalBars;i>=0;i--){
-      const msAgo=i*300000; // 5 min in ms
+      const msAgo=i*300000;
       const date=new Date(Date.now()-msAgo);
       const h=date.getHours(), m=date.getMinutes();
-      // Skip outside market hours (9:30am–4pm ET) and weekends
       if(date.getDay()===0||date.getDay()===6)continue;
-      if(h<9||(h===9&&m<30)||h>=16)continue;
+      // Equity futures: 9:30am-4pm ET; commodities trade almost 24h — skip dead hours only
+      if(!isCommodity&&(h<9||(h===9&&m<30)||h>=16))continue;
+      if(isCommodity&&(h<1||h>=23))continue;
       tLen++;
       if(tLen>20+r()*60){ tDir=r()>0.45?1:-1; tLen=0; }
       if(r()<0.04) vol=0.5+r()*0.8;
@@ -791,11 +821,9 @@ function generateFallbackData(instr, tf){
       const vol_k=Math.floor((200+r()*800)*mult);
       candles.push({t:date,o,h:h2,l:l2,c,v:vol_k,demo:true});
       price=c+tDir*barVol*0.02;
-      price=Math.max(Math.min(price,iES?5800:24000),iES?3500:13000);
+      price=Math.max(Math.min(price,priceMax),priceMin);
     }
   } else {
-    // Daily candles
-    const baseRange=iES?35:140;
     for(let i=520;i>=0;i--){
       const date=new Date(Date.now()-i*86400000);
       if(date.getDay()===0||date.getDay()===6)continue;
@@ -819,11 +847,11 @@ function generateFallbackData(instr, tf){
       const h=+(hi+(isPinUp?dayVol*(0.6+r()*0.4):upperWick)).toFixed(2);
       const l=+(lo-(isPinDown?dayVol*(0.6+r()*0.4):lowerWick)).toFixed(2);
       const rangeNorm=(h-l)/dayVol;
-      const vol_k=Math.floor((0.6+rangeNorm*0.8)*mult*(iES?60000:200000)+r()*mult*(iES?40000:150000));
+      const vol_k=Math.floor((0.6+rangeNorm*0.8)*mult*60000+r()*mult*40000);
       candles.push({t:date,o,h,l,c,v:vol_k,demo:true});
       const drift=tDir*dayVol*0.03;
       price=c+drift;
-      price=Math.max(Math.min(price,iES?5800:24000),iES?3500:13000);
+      price=Math.max(Math.min(price,priceMax),priceMin);
     }
   }
   return candles;
@@ -1887,9 +1915,7 @@ const ADV = {
       if(tgtWrong)  w+=`<br>⚠️ <strong style="color:#E53935">Target is on wrong side!</strong> For a ${isLong?'long':'short'}, target goes ${isLong?'ABOVE':'BELOW'} entry. ↩ Reset.`;
       if(!w&&rr<2)  w+=`<br>💡 R:R = <strong>${rr.toFixed(2)}:1</strong> — try to get 2:1 or higher. Move target further.`;
       // Dollar amounts
-      const isES=app.instrument==='ES=F';
-      const microName=isES?'MES':'MNQ', microPPT=isES?5:2;
-      const fullName=isES?'ES':'NQ', fullPPT=isES?50:20;
+      const {microName,fullName,microPPT,fullPPT}=instrMeta(app.instrument);
       const mRisk=(risk*microPPT).toFixed(0), mProfit=(reward*microPPT).toFixed(0);
       const fRisk=(risk*fullPPT).toFixed(0), fProfit=(reward*fullPPT).toFixed(0);
       const acct=parseInt(localStorage.getItem('bt_acct')||'0');
@@ -2114,13 +2140,13 @@ function nextTrade(){
 // ════════════════════════════════════════════
 function initPaperMode(){
   const saved=localStorage.getItem('bt_paper_state');
-  if(saved){ try{ const s=JSON.parse(saved); app.paperBalance=s.balance||10000; app.paperTrades=s.trades||[]; }catch{} }
-  else { app.paperBalance=10000; app.paperTrades=[]; }
-  app.paperPos=null; app.paperPaused=false; app.paperSpeed=1200; app.paperContract='micro';
+  if(saved){ try{ const s=JSON.parse(saved); app.paperBalance=s.balance||10000; app.paperTrades=s.trades||[]; app.paperContract=s.contract||'micro'; }catch{} }
+  else { app.paperBalance=10000; app.paperTrades=[]; app.paperContract='micro'; }
+  app.paperPos=null; app.paperPaused=false; app.paperSpeed=1200;
   loadPaperWindow();
 }
 function savePaperState(){
-  localStorage.setItem('bt_paper_state',JSON.stringify({balance:app.paperBalance,trades:app.paperTrades}));
+  localStorage.setItem('bt_paper_state',JSON.stringify({balance:app.paperBalance,trades:app.paperTrades,contract:app.paperContract}));
 }
 function loadPaperWindow(){
   clearInterval(app.paperTimer);
@@ -2157,12 +2183,12 @@ function startPaperTimer(){
   },app.paperSpeed);
 }
 function paperPPT(){
-  const isES=app.instrument==='ES=F';
-  return app.paperContract==='micro'?(isES?5:2):(isES?50:20);
+  const m=instrMeta(app.instrument);
+  return app.paperContract==='micro'?m.microPPT:m.fullPPT;
 }
 function paperContractName(){
-  const isES=app.instrument==='ES=F';
-  return app.paperContract==='micro'?(isES?'MES':'MNQ'):(isES?'ES':'NQ');
+  const m=instrMeta(app.instrument);
+  return app.paperContract==='micro'?m.microName:m.fullName;
 }
 function paperCurrentPrice(){
   const idx=app.winStart+HISTORY+app.revealIdx;
@@ -2190,21 +2216,22 @@ function paperSell(){
   drawChart(HISTORY+1+app.revealIdx);
   renderPaperPanel();
 }
-function paperSetStop(){
+function paperSetStopPts(pts){
   if(!app.paperPos)return;
-  const pts=parseFloat(prompt(`Set stop loss — how many points away from entry (${app.paperPos.entry.toFixed(0)})?`));
-  if(!pts||isNaN(pts)||pts<=0)return;
   app.paperPos.stop=app.paperPos.dir==='long'?app.paperPos.entry-pts:app.paperPos.entry+pts;
   app.stop=app.paperPos.stop;
   renderPaperPanel(); drawChart(HISTORY+1+app.revealIdx);
 }
-function paperSetTarget(){
+function paperSetTargetPts(pts){
   if(!app.paperPos)return;
-  const pts=parseFloat(prompt(`Set take profit — how many points away from entry (${app.paperPos.entry.toFixed(0)})?`));
-  if(!pts||isNaN(pts)||pts<=0)return;
   app.paperPos.target=app.paperPos.dir==='long'?app.paperPos.entry+pts:app.paperPos.entry-pts;
   app.target=app.paperPos.target;
   renderPaperPanel(); drawChart(HISTORY+1+app.revealIdx);
+}
+function setPaperContract(type){
+  app.paperContract=type;
+  savePaperState();
+  renderPaperPanel();
 }
 function paperCloseAt(exitPrice,reason){
   if(!app.paperPos)return;
@@ -2260,37 +2287,50 @@ function paperResetAccount(){
   loadPaperWindow();
 }
 function renderPaperPanel(){
-  const isES=app.instrument==='ES=F';
-  const microName=paperContractName();
+  const contractName=paperContractName();
   const ppt=paperPPT();
-  const pnl=app.paperUnrealizedPnl?app.paperUnrealizedPnl():paperUnrealizedPnl();
-  const pnlCls=pnl>0?'paper-pnl-pos':pnl<0?'paper-pnl-neg':'paper-pnl-zero';
-  const pnlStr=(pnl>=0?'+':'')+'$'+pnl.toFixed(2);
-  const sessionPnl=app.paperTrades.slice(0,100).reduce((sum,t)=>sum+t.pnl,0);
+  const meta=instrMeta(app.instrument);
+  const sessionPnl=app.paperTrades.reduce((sum,t)=>sum+t.pnl,0);
   const sessionStr=(sessionPnl>=0?'+':'')+'$'+sessionPnl.toFixed(2);
+  const wins=app.paperTrades.filter(t=>t.pnl>0).length;
+  const losses=app.paperTrades.filter(t=>t.pnl<=0).length;
+  const total=app.paperTrades.length;
+  const winRate=total>0?Math.round(wins/total*100):0;
+  const winRateHtml=total>=3?` &nbsp;|&nbsp; <strong style="color:${winRate>=50?'#26A69A':'#EF5350'}">${winRate}% Win</strong> (${wins}W/${losses}L)`:'';
+  const spd=app.paperSpeed;
 
   document.getElementById('stepDots').innerHTML='';
   document.getElementById('iIcon').textContent='💰';
-  document.getElementById('iTitle').textContent='Paper Trading — '+microName;
-  document.getElementById('iDesc').innerHTML=`Balance: <strong style="color:#F9E07A;">$${app.paperBalance.toFixed(2)}</strong> &nbsp;|&nbsp; All-time P&L: <strong style="color:${sessionPnl>=0?'#26A69A':'#EF5350'}">${sessionStr}</strong>`;
+  document.getElementById('iTitle').textContent='Paper Trading — '+contractName;
+  document.getElementById('iDesc').innerHTML=`Balance: <strong style="color:#F9E07A;">$${app.paperBalance.toFixed(2)}</strong> &nbsp;|&nbsp; P&L: <strong style="color:${sessionPnl>=0?'#26A69A':'#EF5350'}">${sessionStr}</strong>${winRateHtml}`;
 
   let posHtml='';
   if(app.paperPos){
     const cur=paperCurrentPrice()||app.paperPos.entry;
     const uPts=app.paperPos.dir==='long'?(cur-app.paperPos.entry):(app.paperPos.entry-cur);
     const uPnl=uPts*ppt;
+    const stopSet=app.paperPos.stop!=null;
+    const tgtSet=app.paperPos.target!=null;
     posHtml=`<div class="paper-pos-box">
-      <strong style="color:${app.paperPos.dir==='long'?'#26A69A':'#EF5350'}">${app.paperPos.dir==='long'?'📈 LONG':'📉 SHORT'}</strong> &nbsp;·&nbsp; Entry: <strong>${app.paperPos.entry.toFixed(0)}</strong> &nbsp;·&nbsp; Now: <strong>${cur.toFixed(0)}</strong><br>
-      Unrealized P&L: <strong class="${uPnl>=0?'paper-pnl-pos':'paper-pnl-neg'}" style="font-size:16px;">${uPnl>=0?'+':''}$${uPnl.toFixed(2)}</strong> (${uPts>=0?'+':''}${uPts.toFixed(1)} pts)<br>
-      ${app.paperPos.stop?`Stop: <span style="color:#EF5350">${app.paperPos.stop.toFixed(0)}</span> &nbsp;`:'<span style="color:#888">No stop set</span> &nbsp;'}
-      ${app.paperPos.target?`Target: <span style="color:#26A69A">${app.paperPos.target.toFixed(0)}</span>`:'<span style="color:#888">No target set</span>'}
+      <strong style="color:${app.paperPos.dir==='long'?'#26A69A':'#EF5350'}">${app.paperPos.dir==='long'?'📈 LONG':'📉 SHORT'}</strong> &nbsp;·&nbsp; Entry: <strong>${app.paperPos.entry.toFixed(2)}</strong> &nbsp;·&nbsp; Now: <strong>${cur.toFixed(2)}</strong><br>
+      Unrealized P&L: <strong class="${uPnl>=0?'paper-pnl-pos':'paper-pnl-neg'}" style="font-size:16px;">${uPnl>=0?'+':''}$${uPnl.toFixed(2)}</strong> (${uPts>=0?'+':''}${uPts.toFixed(2)} pts)<br>
+      ${stopSet?`Stop: <span style="color:#EF5350">${app.paperPos.stop.toFixed(2)}</span> &nbsp;`:'<span style="color:#888">No stop</span> &nbsp;'}
+      ${tgtSet?`Target: <span style="color:#26A69A">${app.paperPos.target.toFixed(2)}</span>`:'<span style="color:#888">No target</span>'}
     </div>`;
   }
+
+  // Preset stop / target buttons based on instrument
+  const stopPresets=meta.stopPresets;
+  const tgtPresets=meta.targetPresets;
+  const activeStop=app.paperPos?.stop!=null?Math.abs(app.paperPos.stop-app.paperPos.entry):null;
+  const activeTgt=app.paperPos?.target!=null?Math.abs(app.paperPos.target-app.paperPos.entry):null;
+  const stopBtns=stopPresets.map(p=>`<button class="paper-speed-btn${activeStop===p?' active':''}" onclick="paperSetStopPts(${p})" style="flex:1;padding:6px;font-size:11px;">${p}pt</button>`).join('');
+  const tgtBtns=tgtPresets.map(p=>`<button class="paper-speed-btn${activeTgt===p?' active':''}" onclick="paperSetTargetPts(${p})" style="flex:1;padding:6px;font-size:11px;">${p}pt</button>`).join('');
 
   const recentTrades=app.paperTrades.slice(0,5).map(t=>`
     <div class="paper-trade-row">
       <span style="color:${t.dir==='long'?'#26A69A':'#EF5350'}">${t.dir==='long'?'▲':'▼'} ${t.contract}</span>
-      <span>${t.entry.toFixed(0)} → ${t.exit.toFixed(0)}</span>
+      <span>${t.entry.toFixed(2)} → ${t.exit.toFixed(2)}</span>
       <span style="color:${t.pnl>=0?'#26A69A':'#EF5350'};font-weight:700;">${t.pnl>=0?'+':''}$${t.pnl.toFixed(2)}</span>
       <span style="color:#666;font-size:10px;">${t.reason}</span>
     </div>`).join('');
@@ -2298,22 +2338,31 @@ function renderPaperPanel(){
   document.getElementById('actionRow').innerHTML=`
     ${posHtml}
     ${app.paperPos
-      ? `<div style="display:flex;gap:8px;margin-bottom:8px;">
+      ? `<div style="display:flex;gap:8px;margin-bottom:6px;">
            <button class="btn-paper-exit" onclick="paperExit()">🚪 Exit Trade Now</button>
          </div>
-         <div style="display:flex;gap:8px;margin-bottom:8px;">
-           <button class="paper-speed-btn" onclick="paperSetStop()" style="flex:1;padding:8px;">📍 Set Stop</button>
-           <button class="paper-speed-btn" onclick="paperSetTarget()" style="flex:1;padding:8px;">🎯 Set Target</button>
+         <div style="margin-bottom:4px;">
+           <div style="font-size:11px;color:#aaa;margin-bottom:3px;">📍 Stop Loss Distance:</div>
+           <div style="display:flex;gap:4px;">${stopBtns}</div>
+         </div>
+         <div style="margin-bottom:8px;">
+           <div style="font-size:11px;color:#aaa;margin-bottom:3px;">🎯 Take Profit Distance:</div>
+           <div style="display:flex;gap:4px;">${tgtBtns}</div>
          </div>`
       : `<div style="display:flex;gap:8px;margin-bottom:8px;">
            <button class="btn-paper-long" onclick="paperBuy()">📈 LONG</button>
            <button class="btn-paper-short" onclick="paperSell()">📉 SHORT</button>
+         </div>
+         <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">
+           <span style="font-size:11px;color:#aaa;">Size:</span>
+           <button class="paper-speed-btn${app.paperContract==='micro'?' active':''}" onclick="setPaperContract('micro')">Micro (${meta.microName})</button>
+           <button class="paper-speed-btn${app.paperContract==='full'?' active':''}" onclick="setPaperContract('full')">Full (${meta.fullName})</button>
          </div>`}
     <div class="paper-speed-row">
       <span>Speed:</span>
-      <button class="paper-speed-btn" id="s05" onclick="setPaperSpeed(500)">Fast</button>
-      <button class="paper-speed-btn active" id="s12" onclick="setPaperSpeed(1200)">Normal</button>
-      <button class="paper-speed-btn" id="s25" onclick="setPaperSpeed(2500)">Slow</button>
+      <button class="paper-speed-btn${spd===500?' active':''}" id="s05" onclick="setPaperSpeed(500)">Fast</button>
+      <button class="paper-speed-btn${spd===1200?' active':''}" id="s12" onclick="setPaperSpeed(1200)">Normal</button>
+      <button class="paper-speed-btn${spd===2500?' active':''}" id="s25" onclick="setPaperSpeed(2500)">Slow</button>
       <button class="paper-speed-btn" id="paperPauseBtn" onclick="togglePaperPause()" style="margin-left:6px;">${app.paperPaused?'▶ Play':'⏸ Pause'}</button>
       <button class="paper-speed-btn" onclick="paperResetAccount()" style="margin-left:auto;color:#EF5350;">🔄 Reset $</button>
     </div>
