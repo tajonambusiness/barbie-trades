@@ -756,7 +756,9 @@ function applyBg(photo){
 }
 function loadProfile(){
   const name = localStorage.getItem('bt_profile_name')||'';
-  const photo = localStorage.getItem('bt_profile_photo')||'';
+  let photo = localStorage.getItem('bt_profile_photo')||'';
+  // Auto-clear photos that are too large (over 200KB base64) — they freeze the page
+  if(photo.length > 270000){ localStorage.removeItem('bt_profile_photo'); photo=''; }
   if(name){
     document.getElementById('profileNameText').textContent = name;
     document.getElementById('profileNameDisplay').style.display = 'flex';
@@ -800,15 +802,28 @@ function handlePhotoUpload(input){
   if(!input.files || !input.files[0]) return;
   const reader = new FileReader();
   reader.onload = e => {
-    const data = e.target.result;
-    localStorage.setItem('bt_profile_photo', data);
-    applyBg(data);
-    const img = document.getElementById('profileAvatarImg');
-    img.src = data; img.style.display = 'block';
-    document.getElementById('profileAvatarEmpty').style.display = 'none';
-    document.getElementById('profileEditBtn').style.display = 'flex';
-    const hdr = document.getElementById('headerAvatar');
-    hdr.src = data; hdr.style.display = 'block';
+    // Compress to max 300×300 JPEG so localStorage doesn't freeze the page
+    const raw = new Image();
+    raw.onload = () => {
+      const MAX = 300;
+      const scale = Math.min(1, MAX / Math.max(raw.width, raw.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(raw.width * scale);
+      canvas.height = Math.round(raw.height * scale);
+      canvas.getContext('2d').drawImage(raw, 0, 0, canvas.width, canvas.height);
+      const data = canvas.toDataURL('image/jpeg', 0.82);
+      try { localStorage.setItem('bt_profile_photo', data); } catch(err) {
+        localStorage.removeItem('bt_profile_photo'); // storage full — skip saving
+      }
+      applyBg(data);
+      const img = document.getElementById('profileAvatarImg');
+      img.src = data; img.style.display = 'block';
+      document.getElementById('profileAvatarEmpty').style.display = 'none';
+      document.getElementById('profileEditBtn').style.display = 'flex';
+      const hdr = document.getElementById('headerAvatar');
+      hdr.src = data; hdr.style.display = 'block';
+    };
+    raw.src = e.target.result;
   };
   reader.readAsDataURL(input.files[0]);
 }
