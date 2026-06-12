@@ -527,15 +527,16 @@ select { font-family: 'Nunito',sans-serif; font-size: 13px; font-weight: 700; ba
 
   <!-- Profile hero -->
   <div class="profile-hero" id="profileHero">
-    <label class="profile-avatar-wrap" id="profileAvatarWrap" for="profileFileInput" style="cursor:pointer;">
+    <div class="profile-avatar-wrap" id="profileAvatarWrap">
       <div class="profile-avatar-empty" id="profileAvatarEmpty">
         <span style="font-size:26px;">📸</span>
         <span>Add your photo</span>
       </div>
       <img id="profileAvatarImg" class="profile-avatar" src="" alt="" style="display:none;">
       <div class="profile-avatar-edit" id="profileEditBtn" style="display:none;">✏️</div>
-    </label>
-    <input type="file" id="profileFileInput" accept="image/*" style="display:none;" onchange="handlePhotoUpload(this)">
+      <input type="file" id="profileFileInput" accept="image/*" onchange="handlePhotoUpload(this)"
+        style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;z-index:2;">
+    </div>
     <div id="profileNameDisplay" style="display:none;">
       <div class="profile-name" id="profileNameText"></div>
       <div class="profile-title">👑 Trading Boss · Barbie Trades</div>
