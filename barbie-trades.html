@@ -527,14 +527,15 @@ select { font-family: 'Nunito',sans-serif; font-size: 13px; font-weight: 700; ba
 
   <!-- Profile hero -->
   <div class="profile-hero" id="profileHero">
-    <div class="profile-avatar-wrap" onclick="triggerPhotoUpload()" id="profileAvatarWrap">
+    <label class="profile-avatar-wrap" id="profileAvatarWrap" for="profileFileInput" style="cursor:pointer;">
       <div class="profile-avatar-empty" id="profileAvatarEmpty">
         <span style="font-size:26px;">📸</span>
         <span>Add your photo</span>
       </div>
       <img id="profileAvatarImg" class="profile-avatar" src="" alt="" style="display:none;">
       <div class="profile-avatar-edit" id="profileEditBtn" style="display:none;">✏️</div>
-    </div>
+    </label>
+    <input type="file" id="profileFileInput" accept="image/*" style="display:none;" onchange="handlePhotoUpload(this)">
     <div id="profileNameDisplay" style="display:none;">
       <div class="profile-name" id="profileNameText"></div>
       <div class="profile-title">👑 Trading Boss · Barbie Trades</div>
@@ -544,7 +545,6 @@ select { font-family: 'Nunito',sans-serif; font-size: 13px; font-weight: 700; ba
       <button class="btn btn-primary btn-sm" onclick="saveProfile()" style="padding:8px 24px;">Save 💕</button>
     </div>
   </div>
-  <input type="file" id="profileFileInput" accept="image/*" style="display:none;" onchange="handlePhotoUpload(this)">
 
   <div class="logo" id="mainLogo" style="margin-top:4px;">Barbie Trades</div>
   <div class="tagline">💖 Train Your Eye. Become Profitable. 💖</div>
