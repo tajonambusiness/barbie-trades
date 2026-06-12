@@ -247,10 +247,10 @@ body {
 #chartCanvas { display: block; touch-action: none; user-select: none; cursor: grab; }
 #priceTooltip { position: absolute; background: rgba(233,30,140,.85); color: white; padding: 3px 9px; border-radius: 8px; font-size: 12px; font-weight: 800; pointer-events: none; display: none; z-index: 10; }
 /* TF switcher bar */
-#tfBar { position: absolute; top: 7px; left: 8px; display: flex; gap: 1px; z-index: 6; background: rgba(255,248,252,0.92); border: 1px solid rgba(233,30,140,0.15); border-radius: 8px; padding: 2px; box-shadow: 0 1px 6px rgba(0,0,0,0.08); }
-.tf-btn { background: transparent; border: none; padding: 3px 9px; font-size: 11px; font-weight: 800; color: #aaa; border-radius: 6px; cursor: pointer; font-family: 'Nunito', sans-serif; letter-spacing: .3px; transition: background .12s, color .12s; }
+#tfBar { display: flex; gap: 1px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 2px; }
+.tf-btn { background: transparent; border: none; padding: 3px 10px; font-size: 12px; font-weight: 800; color: rgba(255,180,220,0.7); border-radius: 6px; cursor: pointer; font-family: 'Nunito', sans-serif; letter-spacing: .3px; transition: background .12s, color .12s; }
 .tf-btn.active { background: #E91E8C; color: white; }
-.tf-btn:hover:not(.active) { background: rgba(233,30,140,0.1); color: #E91E8C; }
+.tf-btn:hover:not(.active) { background: rgba(233,30,140,0.2); color: #FFB6D9; }
 
 /* ── DRAWING TOOLBAR ── */
 #drawToolbarWrap { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); z-index: 20; display: flex; flex-direction: column; align-items: center; gap: 4px; }
@@ -638,6 +638,11 @@ select { font-family: 'Nunito',sans-serif; font-size: 13px; font-weight: 700; ba
     <div class="training-logo">✨ Barbie Trades</div>
     <div class="badge" id="hdrBadge">NQ</div>
     <div class="badge mode-badge" id="hdrMode">Beginner</div>
+    <div id="tfBar">
+      <button class="tf-btn" data-tf="5m" onclick="switchTF('5m')">5m</button>
+      <button class="tf-btn active" data-tf="1h" onclick="switchTF('1h')">1h</button>
+      <button class="tf-btn" data-tf="1d" onclick="switchTF('1d')">1D</button>
+    </div>
     <div class="session-stats" style="margin-left:auto;">
       Session: <span id="sWins">0</span>W / <span id="sLosses">0</span>L &nbsp;|&nbsp; Streak: <span id="sStreak">0</span> 🔥
     </div>
@@ -646,11 +651,6 @@ select { font-family: 'Nunito',sans-serif; font-size: 13px; font-weight: 700; ba
   <div class="chart-wrap" id="chartWrap">
     <canvas id="chartCanvas"></canvas>
     <div id="priceTooltip"></div>
-    <div id="tfBar">
-      <button class="tf-btn" data-tf="5m" onclick="switchTF('5m')">5m</button>
-      <button class="tf-btn active" data-tf="1h" onclick="switchTF('1h')">1h</button>
-      <button class="tf-btn" data-tf="1d" onclick="switchTF('1d')">1D</button>
-    </div>
     <div id="drawToolbarWrap">
       <button id="dtToggle" onclick="toggleDrawToolbar()">✏️ Tools ▾</button>
       <div id="drawToolbar" class="hidden">
