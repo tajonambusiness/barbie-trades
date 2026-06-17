@@ -2904,7 +2904,9 @@ function loadWindow(){
   const max=app.candles.length-HISTORY-REVEAL-15; if(max<1)return;
   let chosen=Math.floor(Math.random()*max);
   if(app.mode==='beginner'){
-    const wantSideways=Math.random()<0.25; // 25% chance to deliberately pick a sideways chart
+    const roll=Math.random();
+    const wantSideways=roll<0.333;
+    const wantDown=roll>=0.333&&roll<0.667;
     const isGoodFlat=(start)=>{
       const slice=app.candles.slice(start,start+HISTORY+1);
       if(slice.length<20)return false;
@@ -2922,12 +2924,11 @@ function loadWindow(){
       app.winStart=tryStart;
       const t=detectTrend();
       if(wantSideways){
-        // Only accept a genuinely flat, choppy window
         if(t==='flat'&&isGoodFlat(tryStart)){chosen=tryStart;break;}
+      } else if(wantDown){
+        if(t==='down'){chosen=tryStart;break;}
       } else {
-        // Accept any clearly trending window, or a good flat as fallback
-        if(t!=='flat'){chosen=tryStart;break;}
-        if(isGoodFlat(tryStart)){chosen=tryStart;break;}
+        if(t==='up'){chosen=tryStart;break;}
       }
     }
   }
