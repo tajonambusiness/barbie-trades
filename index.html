@@ -2904,23 +2904,30 @@ function loadWindow(){
   const max=app.candles.length-HISTORY-REVEAL-15; if(max<1)return;
   let chosen=Math.floor(Math.random()*max);
   if(app.mode==='beginner'){
+    const wantSideways=Math.random()<0.25; // 25% chance to deliberately pick a sideways chart
+    const isGoodFlat=(start)=>{
+      const slice=app.candles.slice(start,start+HISTORY+1);
+      if(slice.length<20)return false;
+      const closes=slice.map(c=>c.c);
+      const firstC=closes[0],lastC=closes[closes.length-1];
+      const netMove=Math.abs((lastC-firstC)/firstC);
+      const mid=Math.floor(closes.length/2);
+      const avgF=closes.slice(0,mid).reduce((a,b)=>a+b,0)/mid;
+      const avgS=closes.slice(mid).reduce((a,b)=>a+b,0)/(closes.length-mid);
+      const drift=Math.abs((avgS-avgF)/avgF);
+      return netMove<0.01&&drift<0.008;
+    };
     for(let i=0;i<40;i++){
       const tryStart=Math.floor(Math.random()*max);
       app.winStart=tryStart;
       const t=detectTrend();
-      if(t!=='flat'){chosen=tryStart;break;}
-      // Sideways: price must genuinely chop — very tight range, no directional drift
-      const slice=app.candles.slice(tryStart,tryStart+HISTORY+1);
-      if(slice.length>20){
-        const closes=slice.map(c=>c.c);
-        const firstC=closes[0], lastC=closes[closes.length-1];
-        const netMove=Math.abs((lastC-firstC)/firstC);
-        // First half vs second half avg — no drift allowed
-        const mid=Math.floor(closes.length/2);
-        const avgFirst=closes.slice(0,mid).reduce((a,b)=>a+b,0)/mid;
-        const avgSecond=closes.slice(mid).reduce((a,b)=>a+b,0)/(closes.length-mid);
-        const drift=Math.abs((avgSecond-avgFirst)/avgFirst);
-        if(netMove<0.01&&drift<0.008){chosen=tryStart;break;}
+      if(wantSideways){
+        // Only accept a genuinely flat, choppy window
+        if(t==='flat'&&isGoodFlat(tryStart)){chosen=tryStart;break;}
+      } else {
+        // Accept any clearly trending window, or a good flat as fallback
+        if(t!=='flat'){chosen=tryStart;break;}
+        if(isGoodFlat(tryStart)){chosen=tryStart;break;}
       }
     }
   }
