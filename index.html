@@ -2410,11 +2410,25 @@ function analyzeChart(){
 
 function detectTrend(){
   const ctxStart=Math.max(0,app.winStart-80);
-  const allC=app.candles.slice(ctxStart,app.winStart+HISTORY).map(c=>c.c);
+  const endIdx=app.winStart+HISTORY;
+  const allC=app.candles.slice(ctxStart,endIdx).map(c=>c.c);
   const e20full=calcEMA(allC,20), e50full=calcEMA(allC,50);
-  const l20=e20full[e20full.length-1], l50=e50full[e50full.length-1];
+  const ni=e20full.length-1;
+  const l20=e20full[ni], l50=e50full[ni];
   if(!l20||!l50)return'flat';
-  if(l20>l50*1.0015)return'up'; if(l20<l50*0.9985)return'down'; return'flat';
+  const pct=(l20-l50)/l50;
+  // Check slope over last 15 candles
+  const lb=Math.min(15,ni);
+  const e20slope=l20-(e20full[ni-lb]||l20);
+  const e50slope=l50-(e50full[ni-lb]||l50);
+  const bothUp=e20slope>0&&e50slope>0;
+  const bothDown=e20slope<0&&e50slope<0;
+  if(pct>0.004)return'up';
+  if(pct<-0.004)return'down';
+  // EMAs are close — use slope to break the tie
+  if(pct>0.001&&bothUp)return'up';
+  if(pct<-0.001&&bothDown)return'down';
+  return'flat';
 }
 
 function buildLesson(win,trendOk,isLong,rr,actual,noHit){
@@ -2888,7 +2902,22 @@ function replayEnd(){
 
 function loadWindow(){
   const max=app.candles.length-HISTORY-REVEAL-15; if(max<1)return;
-  app.winStart=Math.floor(Math.random()*max);
+  let chosen=Math.floor(Math.random()*max);
+  if(app.mode==='beginner'){
+    for(let i=0;i<25;i++){
+      const tryStart=Math.floor(Math.random()*max);
+      app.winStart=tryStart;
+      const t=detectTrend();
+      if(t!=='flat'){chosen=tryStart;break;}
+      // For flat windows, only accept if price truly stayed in a range
+      const slice=app.candles.slice(tryStart,tryStart+HISTORY+1);
+      if(slice.length>10){
+        const firstC=slice[0].c, lastC=slice[slice.length-1].c;
+        if(Math.abs((lastC-firstC)/firstC)<0.02){chosen=tryStart;break;}
+      }
+    }
+  }
+  app.winStart=chosen;
   app.entry=app.stop=app.target=null; app.trend=null; app.revealIdx=0;
   app.drawings=[]; app.drawFirstPt=null; app.drawPreview=null;
   app.viewShift=0; app.viewZoom=1; app.viewOffsetY=0; app.gwAnswers={};
