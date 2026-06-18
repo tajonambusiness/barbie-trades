@@ -1983,10 +1983,10 @@ function detectStructurePoints(candles,effStart,count,lb=5){
   let lastH=null,lastL=null;
   for(const pt of raw){
     if(pt.type==='high'){
-      pt.label=lastH==null?'SH':pt.price>lastH.price?'HH':'LH';
+      pt.label=lastH==null?null:pt.price>lastH.price?'HH':'LH';
       lastH=pt;
     } else {
-      pt.label=lastL==null?'SL':pt.price>lastL.price?'HL':'LL';
+      pt.label=lastL==null?null:pt.price>lastL.price?'HL':'LL';
       lastL=pt;
     }
   }
