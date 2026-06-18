@@ -1994,18 +1994,64 @@ function detectStructurePoints(candles,effStart,count,lb=5){
 }
 
 function drawStructureOverlay(ctx,effStart,count,minP,maxP,W,H,candleW){
+  const actualTrend=detectTrend();
+  const slice=app.candles.slice(effStart,effStart+count);
+
+  // Sideways: draw support/resistance range box
+  if(actualTrend==='flat'){
+    const closes=slice.map(c=>c.c).sort((a,b)=>a-b);
+    const n=closes.length;
+    const resistance=closes[Math.floor(n*0.88)];
+    const support=closes[Math.floor(n*0.12)];
+    const y1=p2y(resistance,minP,maxP,H), y2=p2y(support,minP,maxP,H);
+    ctx.fillStyle='rgba(155,89,182,0.07)';
+    ctx.fillRect(PAD.left,y1,W-PAD.left-PAD.right,y2-y1);
+    ctx.strokeStyle='rgba(155,89,182,0.55)'; ctx.lineWidth=1.5; ctx.setLineDash([6,4]);
+    ctx.beginPath(); ctx.moveTo(PAD.left,y1); ctx.lineTo(W-PAD.right,y1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(PAD.left,y2); ctx.lineTo(W-PAD.right,y2); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.font='bold 10px Nunito,sans-serif'; ctx.textAlign='left';
+    ctx.fillStyle='rgba(155,89,182,0.85)';
+    ctx.fillText('↔ RESISTANCE',PAD.left+6,y1-5);
+    ctx.fillText('↔ SUPPORT',PAD.left+6,y2+13);
+    return;
+  }
+
+  // Trending: draw HH/HL/LH/LL swing labels
   const pts=detectStructurePoints(app.candles,effStart,count);
+  // Connect swing highs with a line and swing lows with a line
+  const highs=pts.filter(p=>p.type==='high'&&p.label);
+  const lows=pts.filter(p=>p.type==='low'&&p.label);
+  const drawLine=(points,color)=>{
+    if(points.length<2)return;
+    ctx.strokeStyle=color; ctx.lineWidth=1; ctx.setLineDash([3,3]);
+    ctx.beginPath();
+    points.forEach((p,i)=>{
+      const x=PAD.left+p.idx*candleW+candleW/2;
+      const y=p2y(p.price,minP,maxP,H)+(p.type==='high'?-5:5);
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    });
+    ctx.stroke(); ctx.setLineDash([]);
+  };
+  drawLine(highs,actualTrend==='up'?'rgba(0,137,123,0.4)':'rgba(183,28,28,0.4)');
+  drawLine(lows,actualTrend==='up'?'rgba(0,137,123,0.4)':'rgba(183,28,28,0.4)');
+
   for(const pt of pts){
     if(!pt.label)continue;
     const x=PAD.left+pt.idx*candleW+candleW/2;
     const isHi=pt.type==='high';
     const py=p2y(pt.price,minP,maxP,H);
     const bullish=pt.label==='HH'||pt.label==='HL';
-    const col=bullish?'#00897B':pt.label==='SH'||pt.label==='SL'?'#9C27B0':'#C62828';
+    const col=bullish?'#00897B':'#C62828';
+    // Dot
     ctx.fillStyle=col;
     ctx.beginPath(); ctx.arc(x,isHi?py-5:py+5,4,0,Math.PI*2); ctx.fill();
-    ctx.font='bold 9px Nunito,sans-serif'; ctx.textAlign='center';
-    ctx.fillText(pt.label,x,isHi?py-12:py+16);
+    // Badge
+    const lw=ctx.measureText(pt.label).width+10;
+    const lx=x-lw/2, ly=isHi?py-22:py+8;
+    ctx.fillStyle=col; ctx.beginPath(); ctx.roundRect(lx,ly,lw,15,4); ctx.fill();
+    ctx.fillStyle='white'; ctx.font='bold 9px Nunito,sans-serif'; ctx.textAlign='center';
+    ctx.fillText(pt.label,x,ly+11);
   }
 }
 
@@ -2013,37 +2059,73 @@ function drawStructureOverlay(ctx,effStart,count,minP,maxP,W,H,candleW){
 function detectSDZones(candles,effStart,count){
   const zones=[];
   const slice=candles.slice(effStart,effStart+count);
-  for(let i=3;i<slice.length-5;i++){
-    const base=slice.slice(i-2,i+1);
-    const bHi=Math.max(...base.map(c=>c.h)), bLo=Math.min(...base.map(c=>c.l));
-    const bRange=bHi-bLo; if(bRange<0.1)continue;
-    const next=slice.slice(i+1,Math.min(slice.length,i+5));
-    const up=next.some(c=>c.c>bHi+bRange*0.8);
-    const dn=next.some(c=>c.c<bLo-bRange*0.8);
-    if(up&&!zones.some(z=>z.type==='demand'&&Math.abs(z.mid-(bHi+bLo)/2)<bRange*3))
-      zones.push({type:'demand',top:bHi+bRange*0.15,bot:bLo-bRange*0.15,si:Math.max(0,i-2),mid:(bHi+bLo)/2});
-    if(dn&&!zones.some(z=>z.type==='supply'&&Math.abs(z.mid-(bHi+bLo)/2)<bRange*3))
-      zones.push({type:'supply',top:bHi+bRange*0.15,bot:bLo-bRange*0.15,si:Math.max(0,i-2),mid:(bHi+bLo)/2});
+  for(let i=5;i<slice.length-6;i++){
+    // Compute local ATR from the 10 candles before this point
+    const ctx10=slice.slice(Math.max(0,i-10),i);
+    if(ctx10.length<3)continue;
+    let atrSum=0;
+    for(let k=1;k<ctx10.length;k++)
+      atrSum+=Math.max(ctx10[k].h-ctx10[k].l,Math.abs(ctx10[k].h-ctx10[k-1].c),Math.abs(ctx10[k].l-ctx10[k-1].c));
+    const atr=atrSum/(ctx10.length-1);
+    if(!atr)continue;
+    // Try base lengths of 1–4 candles
+    for(let bLen=1;bLen<=4;bLen++){
+      if(i+bLen>=slice.length-3)continue;
+      const base=slice.slice(i,i+bLen);
+      const bHi=Math.max(...base.map(c=>c.h));
+      const bLo=Math.min(...base.map(c=>c.l));
+      const bRange=bHi-bLo;
+      // Base must be tight: range < 1× ATR
+      if(bRange>atr*1.0)continue;
+      // Impulsive move away: close beyond base by 1.5× ATR within next 4 candles
+      const after=slice.slice(i+bLen,Math.min(slice.length,i+bLen+4));
+      const rallyUp=after.some(c=>c.c>bHi+atr*1.5);
+      const dropDn=after.some(c=>c.c<bLo-atr*1.5);
+      if(rallyUp&&!zones.some(z=>z.type==='demand'&&Math.abs(z.mid-(bHi+bLo)/2)<atr*2)){
+        zones.push({type:'demand',top:bHi,bot:bLo,si:i,ei:i+bLen,mid:(bHi+bLo)/2});
+        break;
+      }
+      if(dropDn&&!zones.some(z=>z.type==='supply'&&Math.abs(z.mid-(bHi+bLo)/2)<atr*2)){
+        zones.push({type:'supply',top:bHi,bot:bLo,si:i,ei:i+bLen,mid:(bHi+bLo)/2});
+        break;
+      }
+    }
   }
-  return zones;
+  // Return the 3 most recent of each type
+  const d=zones.filter(z=>z.type==='demand').slice(-3);
+  const s=zones.filter(z=>z.type==='supply').slice(-3);
+  return [...d,...s];
 }
 
 function drawZonesOverlay(ctx,effStart,count,minP,maxP,W,H,candleW){
   const zones=detectSDZones(app.candles,effStart,count);
   for(const z of zones){
     const y1=p2y(z.top,minP,maxP,H), y2=p2y(z.bot,minP,maxP,H);
-    const x1=PAD.left+z.si*candleW;
+    // Zone starts at formation candle, extends to right edge
+    const x1=Math.max(PAD.left, PAD.left+(z.si-(effStart||0))*candleW);
+    const x2=W-PAD.right;
+    if(x1>=x2)continue;
     const isDemand=z.type==='demand';
-    ctx.fillStyle=isDemand?'rgba(38,166,154,.13)':'rgba(239,83,80,.13)';
-    ctx.fillRect(x1,y1,W-PAD.right-x1,y2-y1);
-    ctx.strokeStyle=isDemand?'rgba(0,137,123,.35)':'rgba(183,28,28,.35)';
-    ctx.lineWidth=1; ctx.setLineDash([3,3]);
-    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(W-PAD.right,y1); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(x1,y2); ctx.lineTo(W-PAD.right,y2); ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.fillStyle=isDemand?'rgba(0,137,123,.7)':'rgba(183,28,28,.7)';
-    ctx.font='bold 8px Nunito,sans-serif'; ctx.textAlign='left';
-    ctx.fillText(isDemand?'DEMAND':'SUPPLY',x1+3,y1+10);
+    // Fill
+    ctx.fillStyle=isDemand?'rgba(38,166,154,0.11)':'rgba(239,83,80,0.11)';
+    ctx.fillRect(x1,y1,x2-x1,y2-y1);
+    // Solid top & bottom borders
+    ctx.strokeStyle=isDemand?'rgba(0,137,123,0.6)':'rgba(183,28,28,0.6)';
+    ctx.lineWidth=1.5; ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x1,y2); ctx.lineTo(x2,y2); ctx.stroke();
+    // Left edge marker
+    ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x1,y2); ctx.stroke();
+    // Label pill
+    const label=isDemand?'⚡ DEMAND':'⚠️ SUPPLY';
+    ctx.font='bold 9px Nunito,sans-serif'; ctx.textAlign='left';
+    const tw=ctx.measureText(label).width+10;
+    const ty=(y1+y2)/2-8;
+    ctx.fillStyle=isDemand?'rgba(0,137,123,0.85)':'rgba(183,28,28,0.85)';
+    ctx.beginPath(); ctx.roundRect(x1+4,ty,tw,16,4); ctx.fill();
+    ctx.fillStyle='white';
+    ctx.fillText(label,x1+9,ty+11);
   }
 }
 
@@ -2073,11 +2155,17 @@ const BEG = {
     icon:'💭', title:'Based on that — what would you do?',
     desc(){
       const t=app.trend;
+      const actual=detectTrend();
+      const structureNote=actual==='up'
+        ?`<br><br><span style="color:#00897B;font-size:12px;">👆 See the <strong>HH/HL labels</strong> on the chart — price made Higher Highs and Higher Lows. That staircase going up-right is the uptrend.</span>`
+        :actual==='down'
+        ?`<br><br><span style="color:#C62828;font-size:12px;">👆 See the <strong>LH/LL labels</strong> on the chart — price made Lower Highs and Lower Lows. That staircase going down-right is the downtrend.</span>`
+        :`<br><br><span style="color:#9C27B0;font-size:12px;">👆 See the <strong>purple box</strong> on the chart — price bounced between support and resistance with no breakout. That's consolidation.</span>`;
       return t==='bullish'
-        ? `You said the market is going <strong>UP</strong>. So you'd want to <strong>BUY</strong> — profit when price rises.<br><br>But sometimes even in an uptrend, price is <em>too extended</em> — it's already gone way up and you've missed the move. Would you still enter here, or wait?`
+        ? `You said <strong>Bullish ✅</strong> — so you'd look to <strong>BUY</strong>.${structureNote}`
         : t==='bearish'
-        ? `You said the market is going <strong>DOWN</strong>. So you'd want to <strong>SELL SHORT</strong> — profit when price falls.<br><br>Look at where the "NOW →" line is. Is price right at the EMA? Or has it already fallen a long way?`
-        : `You said the market looks <strong>sideways</strong>. Smart call — in a choppy market, the safest move is to sit out. No trade = no loss.`;
+        ? `You said <strong>Bearish ✅</strong> — so you'd look to <strong>SELL SHORT</strong>.${structureNote}`
+        : `You said <strong>Sideways ✅</strong> — smart. In a ranging market the safest move is to sit out.${structureNote}`;
     },
     actions(){
       const t=app.trend;
@@ -2262,7 +2350,7 @@ function setPhase(phase){
 }
 
 // ── CONTROLS ─────────────────────────────────
-function chooseTrend(t){ app.trend=t; app.entry=app.stop=app.target=null; setPhase(app.mode==='beginner'?'bq_buy':'entry'); }
+function chooseTrend(t){ app.trend=t; app.entry=app.stop=app.target=null; if(app.mode==='beginner') app.showStructure=true; setPhase(app.mode==='beginner'?'bq_buy':'entry'); }
 function resetLevels(){ app.entry=app.stop=app.target=null; setPhase('entry'); }
 function backToEntry(){ app.stop=app.target=null; setPhase('entry'); }
 function backToStop(){ app.target=null; setPhase('stop'); }
@@ -2939,6 +3027,7 @@ function loadWindow(){
   app.entry=app.stop=app.target=null; app.trend=null; app.revealIdx=0;
   app.drawings=[]; app.drawFirstPt=null; app.drawPreview=null;
   app.viewShift=0; app.viewZoom=1; app.viewOffsetY=0; app.gwAnswers={};
+  app.showStructure=false;
   sizeCanvas(); setPhase(app.mode==='beginner'?'bq_trend':app.mode==='guided'?'gw_ema':'trend');
 }
 
