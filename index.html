@@ -2057,12 +2057,11 @@ const BEG = {
     dots:2, step:1,
     icon:'🔍', title:'Which way is this market moving?',
     desc(){
-      return `Look at the two lines on the chart:<br>
-<span class="ema-20">• Pink line (EMA 20)</span> = average of last 20 candles — moves fast<br>
-<span class="ema-50">• Gold line (EMA 50)</span> = average of last 50 candles — moves slow<br><br>
-<strong>Pink ABOVE gold + both going UP</strong> → market is rising → Bullish<br>
-<strong>Pink BELOW gold + both going DOWN</strong> → market is falling → Bearish<br>
-<strong>Lines crossing/flat/tangled</strong> → no clear direction → Sideways`;
+      return `Look at the <strong>candles</strong> first — forget the lines for a second.<br><br>
+<strong>📈 Uptrend (Bullish):</strong> Price is making a staircase going up. Higher highs, higher lows. The whole picture tilts up-right.<br>
+<strong>📉 Downtrend (Bearish):</strong> Price is making a staircase going down. Lower highs, lower lows. The whole picture tilts down-right.<br>
+<strong>↔️ Sideways:</strong> Price is bouncing between two flat levels — no real direction. Goes up, comes back, goes up again to the same spot.<br><br>
+<span style="color:rgba(255,180,220,0.7);font-size:12px;">The pink &amp; gold lines confirm the direction — but the candles tell you first.</span>`;
     },
     actions(){ return `
       <button class="btn btn-up"  onclick="chooseTrend('bullish')">📈 Bullish — Going Up</button>
@@ -2907,28 +2906,32 @@ function loadWindow(){
     const roll=Math.random();
     const wantSideways=roll<0.333;
     const wantDown=roll>=0.333&&roll<0.667;
-    const isGoodFlat=(start)=>{
+    // Price-action checks — ignore EMAs, judge by where candles actually went
+    const priceCheck=(start)=>{
       const slice=app.candles.slice(start,start+HISTORY+1);
-      if(slice.length<20)return false;
+      if(slice.length<20)return null;
       const closes=slice.map(c=>c.c);
       const firstC=closes[0],lastC=closes[closes.length-1];
-      const netMove=Math.abs((lastC-firstC)/firstC);
+      const net=(lastC-firstC)/firstC;
       const mid=Math.floor(closes.length/2);
       const avgF=closes.slice(0,mid).reduce((a,b)=>a+b,0)/mid;
       const avgS=closes.slice(mid).reduce((a,b)=>a+b,0)/(closes.length-mid);
-      const drift=Math.abs((avgS-avgF)/avgF);
-      return netMove<0.01&&drift<0.008;
+      const drift=(avgS-avgF)/avgF;
+      return{net,drift};
     };
-    for(let i=0;i<40;i++){
+    for(let i=0;i<60;i++){
       const tryStart=Math.floor(Math.random()*max);
-      app.winStart=tryStart;
-      const t=detectTrend();
+      const pc=priceCheck(tryStart);
+      if(!pc)continue;
       if(wantSideways){
-        if(t==='flat'&&isGoodFlat(tryStart)){chosen=tryStart;break;}
+        // Sideways: price went nowhere — candles clearly chopping in a range
+        if(Math.abs(pc.net)<0.01&&Math.abs(pc.drift)<0.008){chosen=tryStart;break;}
       } else if(wantDown){
-        if(t==='down'){chosen=tryStart;break;}
+        // Bearish: candles clearly moving down — obvious to the eye
+        if(pc.net<-0.03&&pc.drift<-0.015){chosen=tryStart;break;}
       } else {
-        if(t==='up'){chosen=tryStart;break;}
+        // Bullish: candles clearly moving up — obvious staircase
+        if(pc.net>0.03&&pc.drift>0.015){chosen=tryStart;break;}
       }
     }
   }
