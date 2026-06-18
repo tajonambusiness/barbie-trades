@@ -863,6 +863,17 @@ if (!CanvasRenderingContext2D.prototype.roundRect) {
 // ── STATS ────────────────────────────────────
 function loadStats(){ try{return JSON.parse(localStorage.getItem('bt3_stats')||'{"trades":[],"streak":0,"bestStreak":0,"totalWins":0}');}catch{return{trades:[],streak:0,bestStreak:0,totalWins:0};} }
 function saveStats(s){ localStorage.setItem('bt3_stats',JSON.stringify(s)); }
+function begDifficulty(){
+  // Tier 1=easiest (obvious trends), 4=hardest (subtle/choppy)
+  const s=loadStats();
+  const bt=s.trades.filter(t=>t.mode==='beginner');
+  const total=bt.length, wins=bt.filter(t=>t.win).length;
+  const wr=total>0?wins/total:0;
+  if(total<8||wr<0.40)return 1;
+  if(total<20||wr<0.60)return 2;
+  if(total<40||wr<0.75)return 3;
+  return 4;
+}
 function recordTrade(win,rr,inst,date,mode,trendOk,isLong,signals){
   const s=loadStats();
   s.trades.unshift({win,rr:parseFloat(rr.toFixed(2)),inst,date,mode,ts:Date.now(),trendOk,isLong,signals});
@@ -2396,16 +2407,41 @@ function showBegResult(decision,actualTrend,hit){
   const date=app.candles[app.winStart+HISTORY]?.t.toLocaleDateString()||'';
   recordTrade(win,2,app.instrument,date,'beginner');
   const tStr=actualTrend==='up'?'uptrend':actualTrend==='down'?'downtrend':'sideways';
+  const fmt=p=>Math.round(p).toLocaleString();
+  const pts=detectStructurePoints(app.candles,app.winStart,HISTORY+1);
   let lesson='';
-  if(!trendCorrect)lesson=`The market was actually in a ${tStr}. Look at the EMAs: pink above gold + both sloping up = uptrend. Pink below gold + both sloping down = downtrend. Practice spotting this pattern every session.`;
-  else if(trendCorrect&&!dirCorrect)lesson=`You read the trend correctly! But the trade direction didn't match. In an uptrend → BUY. In a downtrend → SELL SHORT. In sideways → stay out.`;
-  else if(win)lesson=`Perfect read! You got the trend AND the direction right. This is the foundation of every trade. Keep drilling this pattern recognition every day.`;
-  else lesson=`Good trend read! The direction was right but the market didn't follow through in the reveal window. This happens — not every good setup pays off immediately. Stay consistent.`;
+  if(!trendCorrect){
+    if(actualTrend==='up'){
+      const hhs=pts.filter(p=>p.label==='HH'), hls=pts.filter(p=>p.label==='HL');
+      if(hhs.length&&hls.length)
+        lesson=`That was an UPTREND. Price made a Higher High at ${fmt(hhs[hhs.length-1].price)} and a Higher Low at ${fmt(hls[hls.length-1].price)}. HH + HL = staircase going up. Look at the green HH/HL labels on the chart now.`;
+      else lesson=`That was an UPTREND — the staircase of Higher Highs and Higher Lows is now labeled on the chart. When price keeps making HH + HL, it's going up.`;
+    } else if(actualTrend==='down'){
+      const lhs=pts.filter(p=>p.label==='LH'), lls=pts.filter(p=>p.label==='LL');
+      if(lhs.length&&lls.length)
+        lesson=`That was a DOWNTREND. Price made a Lower High at ${fmt(lhs[lhs.length-1].price)} and a Lower Low at ${fmt(lls[lls.length-1].price)}. LH + LL = staircase going down. Look at the red LH/LL labels on the chart.`;
+      else lesson=`That was a DOWNTREND — Lower Highs and Lower Lows, labeled on the chart now. When price keeps making LH + LL, it's falling.`;
+    } else {
+      const slice=app.candles.slice(app.winStart,app.winStart+HISTORY+1);
+      const closes=slice.map(c=>c.c).sort((a,b)=>a-b);
+      const hi=fmt(closes[Math.floor(closes.length*0.88)]);
+      const lo=fmt(closes[Math.floor(closes.length*0.12)]);
+      lesson=`That was SIDEWAYS. Price kept bouncing between ${lo} and ${hi} without breaking out in either direction. See the purple box on the chart — no staircase, no trend.`;
+    }
+  } else if(trendCorrect&&!dirCorrect){
+    lesson=`You read the trend correctly! But direction didn't match. Rule: uptrend → BUY. Downtrend → SELL SHORT. Sideways → stay out. The trend tells you which direction to trade, every time.`;
+  } else if(win){
+    const diff=begDifficulty();
+    const diffNote=diff>=3?' That was a harder chart — great eye.':'';
+    lesson=`Perfect read! Trend AND direction both right.${diffNote} This is the foundation of every trade — get the trend right first, everything else follows.`;
+  } else {
+    lesson=`Good trend read — direction was right but the market didn't reach the target in the reveal window. In live trading this trade would still be open. Stay consistent.`;
+  }
   document.getElementById('rEmoji').textContent=win?'🎉':'💪';
   const rTitle=document.getElementById('rTitle');
   rTitle.textContent=win?'Correct! 💕':'Keep Learning!';
   rTitle.className=`result-title ${win?'win':'loss'}`;
-  document.getElementById('rSub').textContent=`Actual trend: ${tStr.toUpperCase()} | Your call: ${app.trend?.toUpperCase()} | Decision: ${decision.toUpperCase()}`;
+  document.getElementById('rSub').textContent=`Actual: ${tStr.toUpperCase()} | Your call: ${app.trend?.toUpperCase()} | Difficulty: Tier ${begDifficulty()}`;
   document.getElementById('rMetrics').innerHTML=`
     <div class="rm"><span class="rv">${trendCorrect?'✅':'❌'}</span>Trend Read</div>
     <div class="rm"><span class="rv">${dirCorrect?'✅':'❌'}</span>Direction</div>
@@ -2994,7 +3030,15 @@ function loadWindow(){
     const roll=Math.random();
     const wantSideways=roll<0.333;
     const wantDown=roll>=0.333&&roll<0.667;
-    // Price-action checks — ignore EMAs, judge by where candles actually went
+    // Difficulty tier determines how obvious the trend must be
+    const diff=begDifficulty();
+    // minMove: how much price must have moved net for a trend to count
+    // Tier 1=very obvious, Tier 4=subtle/choppy
+    const minMove=[0,0.06,0.04,0.025,0.015][diff];
+    const minDrift=[0,0.03,0.02,0.012,0.008][diff];
+    // Sideways: price must stay in a tight range (gets slightly wider as difficulty grows)
+    const maxFlat=[0,0.006,0.008,0.010,0.012][diff];
+
     const priceCheck=(start)=>{
       const slice=app.candles.slice(start,start+HISTORY+1);
       if(slice.length<20)return null;
@@ -3012,14 +3056,11 @@ function loadWindow(){
       const pc=priceCheck(tryStart);
       if(!pc)continue;
       if(wantSideways){
-        // Sideways: price went nowhere — candles clearly chopping in a range
-        if(Math.abs(pc.net)<0.01&&Math.abs(pc.drift)<0.008){chosen=tryStart;break;}
+        if(Math.abs(pc.net)<maxFlat&&Math.abs(pc.drift)<maxFlat*0.8){chosen=tryStart;break;}
       } else if(wantDown){
-        // Bearish: candles clearly moving down — obvious to the eye
-        if(pc.net<-0.03&&pc.drift<-0.015){chosen=tryStart;break;}
+        if(pc.net<-minMove&&pc.drift<-minDrift){chosen=tryStart;break;}
       } else {
-        // Bullish: candles clearly moving up — obvious staircase
-        if(pc.net>0.03&&pc.drift>0.015){chosen=tryStart;break;}
+        if(pc.net>minMove&&pc.drift>minDrift){chosen=tryStart;break;}
       }
     }
   }
