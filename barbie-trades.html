@@ -860,6 +860,7 @@ const app = {
   drawings:[], drawTool:null, drawColor:'#E91E8C', drawFirstPt:null, drawPreview:null,
   viewShift:0, viewZoom:1, viewOffsetY:0,
   showStructure:false, showZones:false, showCross:false,
+  structTaps:[], zoneTaps:[], structRevealed:false, zoneRevealed:false, begDecision:null,
   emaConfig:[{period:20,color:'#E91E8C',show:true},{period:50,color:'#F9A825',show:true}],
   paperBalance:10000, paperPos:null, paperTrades:[], paperTimer:null, paperPaused:false, paperSpeed:1200, paperContract:'micro', draggingLine:null,
   _crossX:null, _crossY:null,
@@ -1299,6 +1300,7 @@ function drawChart(visCount, canvasId='chartCanvas'){
 
   // Structure labels (HH/HL/LH/LL — draw after candles so labels are on top)
   if(app.showStructure && canvasId==='chartCanvas') drawStructureOverlay(ctx,effStart,clampedCount,minP,maxP,W,H,candleW);
+  if((app.phase==='bq_structure'||app.phase==='bq_zones') && canvasId==='chartCanvas') drawTapMarkers(ctx,effStart,clampedCount,minP,maxP,W,H,candleW);
 
   // User drawings
   renderDrawings(ctx,minP,maxP,W,H,clampedCount);
@@ -1487,6 +1489,20 @@ function handleChartTap(clientX, clientY){
     const price=yToPrice(clientY);
     app.drawings.push({type:'hline',price,color:app.drawColor});
     drawChart(HISTORY+1+app.revealIdx); return;
+  }
+  if(app.phase==='bq_structure' && !app.structRevealed){
+    const price=yToPrice(clientY), idx=xToCandle(clientX);
+    app.structTaps=app.structTaps||[];
+    if(app.structTaps.length<8) app.structTaps.push({price,idx});
+    setPhase('bq_structure');
+    return;
+  }
+  if(app.phase==='bq_zones' && !app.zoneRevealed){
+    const price=yToPrice(clientY), idx=xToCandle(clientX);
+    app.zoneTaps=app.zoneTaps||[];
+    if(app.zoneTaps.length<8) app.zoneTaps.push({price,idx});
+    setPhase('bq_zones');
+    return;
   }
   if(!['entry','stop','target'].includes(app.phase))return;
   const price=yToPrice(clientY);
@@ -2158,6 +2174,29 @@ function drawZonesOverlay(ctx,effStart,count,minP,maxP,W,H,candleW){
   }
 }
 
+function drawTapMarkers(ctx,effStart,count,minP,maxP,W,H,candleW){
+  const isStruct=app.phase==='bq_structure';
+  const taps=isStruct?(app.structTaps||[]):(app.zoneTaps||[]);
+  const revealed=isStruct?app.structRevealed:app.zoneRevealed;
+  taps.forEach(tp=>{
+    const x=PAD.left+(tp.idx-effStart)*candleW+candleW/2;
+    if(x<PAD.left||x>W-PAD.right)return;
+    const y=p2y(tp.price,minP,maxP,H);
+    ctx.fillStyle=revealed?'rgba(150,150,150,0.5)':'rgba(233,30,140,0.9)';
+    ctx.beginPath(); ctx.arc(x,y,6,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='white'; ctx.lineWidth=1.5; ctx.stroke();
+  });
+  if(revealed && isStruct && app._structPts){
+    app._structPts.forEach(p=>{
+      const x=PAD.left+(app.winStart+p.idx-effStart)*candleW+candleW/2;
+      if(x<PAD.left||x>W-PAD.right)return;
+      const y=p2y(p.price,minP,maxP,H);
+      ctx.fillStyle=p._matched?'rgba(38,166,154,0.9)':'rgba(239,83,80,0.9)';
+      ctx.beginPath(); ctx.arc(x,p.type==='high'?y-14:y+14,5,0,Math.PI*2); ctx.fill();
+    });
+  }
+}
+
 // ════════════════════════════════════════════
 //  PHASE CONFIGS
 // ════════════════════════════════════════════
@@ -2178,6 +2217,42 @@ const BEG = {
       <button class="btn btn-up"  onclick="chooseTrend('bullish')">📈 Bullish — Going Up</button>
       <button class="btn btn-dn"  onclick="chooseTrend('bearish')">📉 Bearish — Going Down</button>
       <button class="btn btn-neu" onclick="chooseTrend('sideways')">↔️ Sideways — No Clear Trend</button>`; }
+  },
+  bq_structure:{
+    dots:4, step:2,
+    icon:'👆', title(){ return app.structRevealed?'Here\'s what the chart shows':'Tap the swing points'; },
+    desc(){
+      if(app.structRevealed) return app._structFeedback||'';
+      const t=app.trend;
+      if(t==='sideways') return `Sideways markets bounce between a <strong>support</strong> level (the bottom) and a <strong>resistance</strong> level (the top).<br><br>👉 Tap on the chart where you think <strong>resistance</strong> is, then tap where you think <strong>support</strong> is.<br><br><span style="color:rgba(255,180,220,0.6);font-size:12px;">Tap as many times as you want — then hit Reveal.</span>`;
+      const isUp=t==='bullish';
+      return `${isUp?'Uptrends':'Downtrends'} move in a staircase of swing highs and swing lows.<br><br>👉 Tap on the chart at each <strong>swing point</strong> (the tip of each zig-zag) you can see — ${isUp?'the Higher Highs and Higher Lows':'the Lower Highs and Lower Lows'}.<br><br><span style="color:rgba(255,180,220,0.6);font-size:12px;">Tap as many as you can find — then hit Reveal.</span>`;
+    },
+    actions(){
+      if(app.structRevealed) return `<button class="btn btn-primary" onclick="goToZones()">Continue → Supply &amp; Demand</button>`;
+      const n=(app.structTaps||[]).length;
+      return `<button class="btn btn-primary" onclick="revealStructureTaps()">✅ Reveal Answer</button>
+        <button class="btn btn-secondary btn-sm" onclick="undoStructTap()">↩ Undo Tap${n?` (${n})`:''}</button>`;
+    }
+  },
+  bq_zones:{
+    dots:4, step:3,
+    icon:'🎯', title(){ return app.zoneRevealed?'Here\'s the real zone':'Tap a Supply/Demand zone'; },
+    desc(){
+      if(app.zoneRevealed) return app._zoneFeedback||'';
+      const t=app.trend;
+      if(t==='sideways') return `In sideways markets, support/resistance often double as demand/supply zones.<br><br>👉 Tap near the bottom of the range (demand) or the top (supply) where price bounced more than once.`;
+      const isUp=t==='bullish';
+      return isUp
+        ? `A <strong>demand zone</strong> is where price paused in a tight little base right before it rallied hard.<br><br>👉 Tap on the chart where you think that base was, just before the rally.`
+        : `A <strong>supply zone</strong> is where price paused in a tight little base right before it dropped hard.<br><br>👉 Tap on the chart where you think that base was, just before the drop.`;
+    },
+    actions(){
+      if(app.zoneRevealed) return `<button class="btn btn-primary" onclick="setPhase('bq_buy')">Continue → Make Your Call</button>`;
+      const n=(app.zoneTaps||[]).length;
+      return `<button class="btn btn-primary" onclick="revealZoneTaps()">✅ Reveal Answer</button>
+        <button class="btn btn-secondary btn-sm" onclick="undoZoneTap()">↩ Undo Tap${n?` (${n})`:''}</button>`;
+    }
   },
   bq_buy:{
     dots:2, step:2,
@@ -2200,8 +2275,8 @@ const BEG = {
       const t=app.trend;
       if(t==='sideways')return `<button class="btn btn-neu" onclick="begReveal('stay')">✅ Stay Out — No Trade</button>`;
       return `
-        <button class="btn btn-up" onclick="begReveal('long')">📈 Buy (Go Long)</button>
-        <button class="btn btn-dn" onclick="begReveal('short')">📉 Sell Short (Go Short)</button>
+        <button class="btn btn-up" onclick="begChooseDirection('long')">📈 Buy (Go Long)</button>
+        <button class="btn btn-dn" onclick="begChooseDirection('short')">📉 Sell Short (Go Short)</button>
         <button class="btn btn-neu" onclick="begReveal('stay')">↔️ Stay Out</button>`;
     }
   },
@@ -2291,8 +2366,9 @@ const ADV = {
         : `You're <strong style="color:#EF5350">SELLING SHORT 📉</strong> — tap the chart at the price you'd enter the trade.<br><br>👉 Tap right near the <strong>NOW →</strong> line. Best spot = where price just bounced up to EMA 20 from below.`;
     },
     actions(){
-      const hints=app.mode==='intermediate'?`<button class="btn btn-hint" onclick="showMeLevels()">💡 Show Me Where</button>`:'';
-      return `${hints}<button class="btn btn-secondary btn-sm" onclick="resetLevels()">↩ Start Over</button><button class="btn btn-secondary btn-sm" onclick="goBackBeginner()">🌸 Back to Beginner</button>`;
+      const hints=(app.mode==='intermediate'||app.mode==='beginner')?`<button class="btn btn-hint" onclick="showMeLevels()">💡 Show Me Where</button>`:'';
+      const backBtn=app.mode==='beginner'?'':`<button class="btn btn-secondary btn-sm" onclick="goBackBeginner()">🌸 Back to Beginner</button>`;
+      return `${hints}<button class="btn btn-secondary btn-sm" onclick="resetLevels()">↩ Start Over</button>${backBtn}`;
     }
   },
   stop:{
@@ -2343,7 +2419,13 @@ const ADV = {
         contracts=`<br><div style="background:#FFF0F8;border-radius:8px;padding:6px 10px;margin-top:6px;font-size:12px;">💡 Your account (${riskPct}% risk = $${dollarRisk.toFixed(0)}): <strong>${ctrcts} ${microName} contract${ctrcts>1?'s':''}</strong> → Risk <strong style="color:#C62828">-$${recRisk}</strong> · Profit <strong style="color:#00695C">+$${recProfit}</strong></div>`;
       }
       const dollarRow=`<br><div class="dollar-box">💵 Per contract: &nbsp;<strong>${microName}</strong>: Risk <span class="d-loss">-$${mRisk}</span> · Profit <span class="d-win">+$${mProfit}</span> &nbsp;|&nbsp; <strong>${fullName}</strong>: Risk <span class="d-loss">-$${fRisk}</span> · Profit <span class="d-win">+$${fProfit}</span>${contracts}</div>`;
-      return `Direction: <strong>${dir}</strong><br>Risk: <strong>${risk.toFixed(0)} pts</strong> → Reward: <strong>${reward.toFixed(0)} pts</strong> → R:R: <strong style="color:${rr>=2?'#26A69A':'#E91E8C'}">${rr.toFixed(2)}:1 ${rr>=2?'✅':'⚠️'}</strong>${w}${dollarRow}`;
+      let zoneNote='';
+      if(app.mode==='beginner' && app._zonePts){
+        const relevant=app._zonePts.filter(z=>isLong?z.type==='demand':z.type==='supply');
+        const inZone=relevant.some(z=>app.entry<=z.top && app.entry>=z.bot);
+        zoneNote=`<br>${inZone?'✅':'💡'} ${inZone?'Your entry lines up with a real demand/supply zone — nice.':'Tip: the best entries sit right inside a demand/supply zone, not out in open air.'}`;
+      }
+      return `Direction: <strong>${dir}</strong><br>Risk: <strong>${risk.toFixed(0)} pts</strong> → Reward: <strong>${reward.toFixed(0)} pts</strong> → R:R: <strong style="color:${rr>=2?'#26A69A':'#E91E8C'}">${rr.toFixed(2)}:1 ${rr>=2?'✅':'⚠️'}</strong>${w}${dollarRow}${zoneNote}`;
     },
     actions(){ return `
       <button class="btn btn-primary" onclick="startReveal()">✨ See What Happened!</button>
@@ -2375,30 +2457,33 @@ function setPhase(phase){
   }
   document.getElementById('stepDots').innerHTML=dotsHtml;
   document.getElementById('iIcon').textContent=cfg.icon;
-  document.getElementById('iTitle').textContent=cfg.title;
+  document.getElementById('iTitle').textContent=typeof cfg.title==='function'?cfg.title():cfg.title;
   document.getElementById('iDesc').innerHTML=typeof cfg.desc==='function'?cfg.desc():cfg.desc;
   document.getElementById('actionRow').innerHTML=typeof cfg.actions==='function'?cfg.actions():'';
-  const vis=HISTORY+1+(['trend','entry','stop','target','confirm','bq_trend','bq_buy','bq_stay'].includes(phase)?0:app.revealIdx);
+  const vis=HISTORY+1+(['trend','entry','stop','target','confirm','bq_trend','bq_structure','bq_zones','bq_buy','bq_stay'].includes(phase)?0:app.revealIdx);
   drawChart(vis);
 }
 
 // ── CONTROLS ─────────────────────────────────
-function chooseTrend(t){ app.trend=t; app.entry=app.stop=app.target=null; if(app.mode==='beginner') app.showStructure=true; setPhase(app.mode==='beginner'?'bq_buy':'entry'); }
+function chooseTrend(t){
+  app.trend=t; app.entry=app.stop=app.target=null;
+  if(app.mode==='beginner'){
+    app.structTaps=[]; app.zoneTaps=[]; app.structRevealed=false; app.zoneRevealed=false;
+    app._structPts=null; app._zonePts=null;
+    setPhase('bq_structure');
+  } else {
+    setPhase('entry');
+  }
+}
 function resetLevels(){ app.entry=app.stop=app.target=null; setPhase('entry'); }
 function backToEntry(){ app.stop=app.target=null; setPhase('entry'); }
 function backToStop(){ app.target=null; setPhase('stop'); }
-function goBackBeginner(){ app.mode='beginner'; document.getElementById('hdrMode').textContent='🌸 Beginner'; app.entry=app.stop=app.target=null; setPhase('bq_trend'); }
+function goBackBeginner(){ app.mode='beginner'; document.getElementById('hdrMode').textContent='🌸 Beginner'; app.entry=app.stop=app.target=null; app.structTaps=[]; app.zoneTaps=[]; app.structRevealed=false; app.zoneRevealed=false; setPhase('bq_trend'); }
 
 // ── BEGINNER REVEAL ──────────────────────────
 function begReveal(decision){
   app.entry=null; app.stop=null; app.target=null;
   const isLong=decision==='long';
-  if(decision!=='stay'){
-    const idx=app.winStart+HISTORY;
-    app.entry=app.candles[idx].c;
-    if(isLong){ app.stop=detectSwingLow(app.candles,idx,15); app.target=+(app.entry+Math.abs(app.entry-app.stop)*2).toFixed(2); }
-    else       { app.stop=detectSwingHigh(app.candles,idx,15); app.target=+(app.entry-Math.abs(app.stop-app.entry)*2).toFixed(2); }
-  }
   app.revealIdx=0; app.phase='bq_revealing';
   setPhase('bq_revealing');
   const totalBase=HISTORY+1;
@@ -2416,6 +2501,74 @@ function begReveal(decision){
     }
   },75);
 }
+
+function begChooseDirection(decision){
+  app.begDecision=decision;
+  app.entry=app.stop=app.target=null;
+  setPhase('entry');
+}
+
+function revealStructureTaps(){
+  const t=app.trend;
+  const taps=app.structTaps||[];
+  const slice=app.candles.slice(app.winStart,app.winStart+HISTORY+1);
+  const hi=Math.max(...slice.map(c=>c.h)), lo=Math.min(...slice.map(c=>c.l));
+  const tol=(hi-lo)*0.035;
+  let feedback;
+  if(t==='sideways'){
+    const closes=slice.map(c=>c.c).sort((a,b)=>a-b);
+    const n=closes.length;
+    const resistance=closes[Math.floor(n*0.88)], support=closes[Math.floor(n*0.12)];
+    const gotRes=taps.some(tp=>Math.abs(tp.price-resistance)<tol);
+    const gotSup=taps.some(tp=>Math.abs(tp.price-support)<tol);
+    const fmt=p=>Math.round(p).toLocaleString();
+    feedback=`${gotRes?'✅':'❌'} Resistance is around <strong>${fmt(resistance)}</strong><br>${gotSup?'✅':'❌'} Support is around <strong>${fmt(support)}</strong><br><br>${(gotRes&&gotSup)?'Nice — you spotted both levels!':'Look at the purple box now overlaid on the chart — that\'s the real range.'}`;
+  } else {
+    const pts=detectStructurePoints(app.candles,app.winStart,HISTORY+1).filter(p=>p.label);
+    let hits=0;
+    pts.forEach(p=>{
+      p._matched=taps.some(tp=>Math.abs(tp.idx-(app.winStart+p.idx))<4 && Math.abs(tp.price-p.price)<tol);
+      if(p._matched)hits++;
+    });
+    app._structPts=pts;
+    const total=pts.length;
+    feedback=`You correctly spotted <strong>${hits} of ${total}</strong> swing points.<br><br>${hits===total&&total>0?'Perfect read of the staircase! 🎉':'The dots now on the chart show every swing point you may have missed (green = matched, red = missed).'}`;
+  }
+  app._structFeedback=feedback;
+  app.structRevealed=true;
+  app.showStructure=true;
+  setPhase('bq_structure');
+}
+function undoStructTap(){ if(app.structTaps&&app.structTaps.length){ app.structTaps.pop(); setPhase('bq_structure'); } }
+function goToZones(){ app.zoneTaps=[]; app.zoneRevealed=false; app._zoneFeedback=null; setPhase('bq_zones'); }
+
+function revealZoneTaps(){
+  const zones=detectSDZones(app.candles,app.winStart,HISTORY+1);
+  const taps=app.zoneTaps||[];
+  let relevant=zones;
+  if(app.trend==='bullish') relevant=zones.filter(z=>z.type==='demand');
+  else if(app.trend==='bearish') relevant=zones.filter(z=>z.type==='supply');
+  let hits=0;
+  relevant.forEach(z=>{
+    const range=z.top-z.bot;
+    z._matched=taps.some(tp=>
+      tp.idx>=app.winStart+z.si-3 && tp.idx<=app.winStart+z.ei+3 &&
+      tp.price<=z.top+range && tp.price>=z.bot-range
+    );
+    if(z._matched)hits++;
+  });
+  app._zonePts=zones;
+  const total=relevant.length;
+  let feedback;
+  const kind=app.trend==='bullish'?'demand':app.trend==='bearish'?'supply':'supply/demand';
+  if(total===0) feedback=`No clean ${kind} zone formed in this exact window — that happens, not every chart has one. The colored boxes now on the chart show the clearest zones nearby.`;
+  else feedback=`You found <strong>${hits} of ${total}</strong> ${kind} zone(s).<br><br>${hits===total?'Great eye — that tight little pause before the big move is exactly what to look for.':'Look at the colored boxes on the chart now — that\'s the tight base right before the impulsive move away from it.'}`;
+  app._zoneFeedback=feedback;
+  app.zoneRevealed=true;
+  app.showZones=true;
+  setPhase('bq_zones');
+}
+function undoZoneTap(){ if(app.zoneTaps&&app.zoneTaps.length){ app.zoneTaps.pop(); setPhase('bq_zones'); } }
 
 function showBegResult(decision,actualTrend,hit){
   const trendCorrect=(app.trend==='bullish'&&actualTrend==='up')||(app.trend==='bearish'&&actualTrend==='down')||(app.trend==='sideways'&&actualTrend==='flat');
@@ -2526,7 +2679,7 @@ function showResult(hit,noHit){
   const actual=detectTrend();
   const trendOk=(app.trend==='bullish'&&actual==='up')||(app.trend==='bearish'&&actual==='down')||(app.trend==='sideways'&&actual==='flat');
   const signals=computeSignals(isLong);
-  recordTrade(win,parseFloat(rr.toFixed(2)),app.instrument,date,app.mode,trendOk,isLong,signals);
+  recordTrade(win,parseFloat(rr.toFixed(2)),app.instrument,date,app.mode,trendOk,isLong,{...signals,actualTrend:actual,winStart:app.winStart});
   document.getElementById('rEmoji').textContent=win?'🎉':'💪';
   const rTitle=document.getElementById('rTitle');
   rTitle.textContent=win?'Winner! 💕':'Learning Moment';
@@ -3061,6 +3214,8 @@ function loadWindow(){
     app.drawings=[]; app.drawFirstPt=null; app.drawPreview=null;
     app.viewShift=0; app.viewZoom=1; app.viewOffsetY=0; app.gwAnswers={};
     app.showStructure=false;
+    app.structTaps=[]; app.zoneTaps=[]; app.structRevealed=false; app.zoneRevealed=false;
+    app._structPts=null; app._zonePts=null; app.begDecision=null;
     sizeCanvas(); setPhase('bq_trend');
     return;
   }
@@ -3108,6 +3263,8 @@ function loadWindow(){
   app.drawings=[]; app.drawFirstPt=null; app.drawPreview=null;
   app.viewShift=0; app.viewZoom=1; app.viewOffsetY=0; app.gwAnswers={};
   app.showStructure=false;
+  app.structTaps=[]; app.zoneTaps=[]; app.structRevealed=false; app.zoneRevealed=false;
+  app._structPts=null; app._zonePts=null; app.begDecision=null;
   sizeCanvas(); setPhase(app.mode==='beginner'?'bq_trend':app.mode==='guided'?'gw_ema':'trend');
 }
 
