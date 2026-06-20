@@ -1457,20 +1457,34 @@ function renderDrawings(ctx,minP,maxP,W,H,visCount){
 }
 
 // ── CANVAS INTERACTION ───────────────────────
+function getEffViewParams(canvas,visCount){
+  const zoomedCount=Math.round(visCount/(app.viewZoom||1));
+  const clampedCount=Math.max(10,Math.min(zoomedCount,app.candles.length));
+  const rawStart=app.winStart-(app.viewShift||0);
+  const effStart=Math.max(0,Math.min(rawStart,app.candles.length-clampedCount));
+  const candleW=Math.max((canvas.width-PAD.left-PAD.right)/clampedCount,2);
+  return {effStart,clampedCount,candleW};
+}
 function yToPrice(clientY,canvasId='chartCanvas'){
   const canvas=document.getElementById(canvasId);
   const rect=canvas.getBoundingClientRect();
   const yPx=(clientY-rect.top)*(canvas.height/rect.height);
-  const slice=app.candles.slice(app.winStart,app.winStart+HISTORY+1);
-  const {minP,maxP}=getPriceRange(slice,[app.entry,app.stop,app.target]);
+  // Use the cached min/max from the last actual draw — already accounts for pan/zoom/vertical offset
+  const minP=app._minP, maxP=app._maxP;
+  if(minP==null||maxP==null){
+    const slice=app.candles.slice(app.winStart,app.winStart+HISTORY+1);
+    const r=getPriceRange(slice,[app.entry,app.stop,app.target]);
+    return +(r.maxP-((yPx-PAD.top)/(canvas.height-PAD.top-PAD.bottom))*(r.maxP-r.minP)).toFixed(2);
+  }
   return +(maxP-((yPx-PAD.top)/(canvas.height-PAD.top-PAD.bottom))*(maxP-minP)).toFixed(2);
 }
 function xToCandle(clientX){
   const canvas=document.getElementById('chartCanvas'), rect=canvas.getBoundingClientRect();
   const xPx=(clientX-rect.left)*(canvas.width/rect.width);
   const visCount=HISTORY+1+app.revealIdx;
-  const candleW=(canvas.width-PAD.left-PAD.right)/visCount;
-  return app.winStart+Math.max(0,Math.min(visCount-1,Math.round((xPx-PAD.left)/candleW)));
+  const {effStart,clampedCount,candleW}=getEffViewParams(canvas,visCount);
+  const rel=Math.max(0,Math.min(clampedCount-1,Math.round((xPx-PAD.left)/candleW)));
+  return effStart+rel;
 }
 
 function handleChartTap(clientX, clientY){
