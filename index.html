@@ -1507,14 +1507,20 @@ function handleChartTap(clientX, clientY){
   if(app.phase==='bq_structure' && !app.structRevealed){
     const price=yToPrice(clientY), idx=xToCandle(clientX);
     app.structTaps=app.structTaps||[];
-    if(app.structTaps.length<8) app.structTaps.push({price,idx});
+    const tol=((app._maxP||0)-(app._minP||0))*0.025;
+    const hitIdx=app.structTaps.findIndex(tp=>Math.abs(tp.idx-idx)<=2&&Math.abs(tp.price-price)<tol);
+    if(hitIdx>=0) app.structTaps.splice(hitIdx,1);
+    else if(app.structTaps.length<8) app.structTaps.push({price,idx});
     setPhase('bq_structure');
     return;
   }
   if(app.phase==='bq_zones' && !app.zoneRevealed){
     const price=yToPrice(clientY), idx=xToCandle(clientX);
     app.zoneTaps=app.zoneTaps||[];
-    if(app.zoneTaps.length<8) app.zoneTaps.push({price,idx});
+    const tol=((app._maxP||0)-(app._minP||0))*0.025;
+    const hitIdx=app.zoneTaps.findIndex(tp=>Math.abs(tp.idx-idx)<=2&&Math.abs(tp.price-price)<tol);
+    if(hitIdx>=0) app.zoneTaps.splice(hitIdx,1);
+    else if(app.zoneTaps.length<8) app.zoneTaps.push({price,idx});
     setPhase('bq_zones');
     return;
   }
@@ -2458,8 +2464,8 @@ function setPhase(phase){
   app.phase=phase;
   // Auto-enable structure+zones in intermediate mode when entering trend phase
   if(phase==='trend'&&app.mode==='intermediate'){ app.showStructure=true; app.showZones=true; }
-  // Reset structure when loading a new beginner window
-  if(phase==='bq_trend'){ app.showStructure=false; }
+  // Reset structure+zones when loading a new beginner window
+  if(phase==='bq_trend'){ app.showStructure=false; app.showZones=false; }
   const cfg=phaseConfig(phase); if(!cfg)return;
   const dotCount=cfg.dots||5;
   let dotsHtml='';
@@ -3227,7 +3233,7 @@ function loadWindow(){
     app.entry=app.stop=app.target=null; app.trend=null; app.revealIdx=0;
     app.drawings=[]; app.drawFirstPt=null; app.drawPreview=null;
     app.viewShift=0; app.viewZoom=1; app.viewOffsetY=0; app.gwAnswers={};
-    app.showStructure=false;
+    app.showStructure=false; app.showZones=false;
     app.structTaps=[]; app.zoneTaps=[]; app.structRevealed=false; app.zoneRevealed=false;
     app._structPts=null; app._zonePts=null; app.begDecision=null;
     sizeCanvas(); setPhase('bq_trend');
@@ -3276,7 +3282,7 @@ function loadWindow(){
   app.entry=app.stop=app.target=null; app.trend=null; app.revealIdx=0;
   app.drawings=[]; app.drawFirstPt=null; app.drawPreview=null;
   app.viewShift=0; app.viewZoom=1; app.viewOffsetY=0; app.gwAnswers={};
-  app.showStructure=false;
+  app.showStructure=false; app.showZones=false;
   app.structTaps=[]; app.zoneTaps=[]; app.structRevealed=false; app.zoneRevealed=false;
   app._structPts=null; app._zonePts=null; app.begDecision=null;
   sizeCanvas(); setPhase(app.mode==='beginner'?'bq_trend':app.mode==='guided'?'gw_ema':'trend');
